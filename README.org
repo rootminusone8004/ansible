@@ -1,0 +1,8 @@
+* Ansible
+
+This is my ansible script repository.
+
+** License
+
+This repository is licensed under *MIT License*. See [[file:LICENSE.txt][LICENSE.txt]] for details.
+
