@@ -1,0 +1,49 @@
+- name: Download Neovim tarball
+  get_url:
+    url: https://github.com/neovim/neovim/releases/download/v0.11.3/nvim-linux-x86_64.tar.gz
+    dest: /tmp/nvim-linux-x86_64.tar.gz
+    mode: '0644'
+
+- name: Extract Neovim tarball
+  unarchive:
+    src: /tmp/nvim-linux-x86_64.tar.gz
+    dest: /tmp
+    remote_src: yes
+
+- name: Rename extracted folder to 'nvim'
+  command: mv /tmp/nvim-linux-x86_64 /tmp/nvim
+  args:
+    creates: /tmp/nvim
+
+- name: remove ~/.local/nvim if exists
+  file:
+    path: "/home/{{ ansible_user }}/.local/nvim"
+    state: absent
+
+- name: Ensure ~/.local directory exists
+  file:
+    path: "/home/{{ ansible_user }}/.local"
+    state: directory
+    mode: '0755'
+
+- name: Move nvim to ~/.local
+  copy:
+    src: /tmp/nvim
+    dest: /home/{{ ansible_user }}/.local/nvim
+    remote_src: yes
+
+- name: Clean up neovim temp files
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/nvim
+    - /tmp/nvim-linux-x86_64.tar.gz
+
+- name: Ensure ~/.local/nvim/bin is in PATH via .bashrc
+  lineinfile:
+    path: "/home/{{ ansible_user }}/.bashrc"
+    regexp: 'export PATH=\$HOME/\.local/nvim/bin:\$PATH'
+    line: 'export PATH=$HOME/.local/nvim/bin:$PATH'
+    state: present
+

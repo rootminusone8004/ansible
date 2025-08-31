@@ -1,0 +1,45 @@
+- name: Try to get fzf version from dnf or apt
+  block:
+    - name: Get version from dnf
+      shell: "dnf info fzf | awk '/^Version/ {print $3}'"
+      register: fzf_version
+      failed_when: false
+      changed_when: false
+      when: ansible_pkg_mgr == 'dnf'
+
+    - name: Get version from apt
+      shell: "apt show fzf 2>/dev/null | awk '/^Version:/ {print $2}'"
+      register: fzf_version
+      failed_when: false
+      changed_when: false
+      when: ansible_pkg_mgr == 'apt'
+
+- name: Set default version if fzf not found in repo
+  set_fact:
+    fzf_repo_version: "{{ fzf_version.stdout | default('0.0') }}"
+
+- name: Install fzf via package manager if version >= 0.64
+  package:
+    name: fzf
+    state: present
+  when: fzf_repo_version is version('0.64', '>=')
+
+- block:
+    - name: Download fzf binary archive
+      get_url:
+        url: https://github.com/junegunn/fzf/releases/download/v0.64.0/fzf-0.64.0-linux_amd64.tar.gz
+        dest: /tmp/fzf.tar.gz
+
+    - name: Extract and install fzf
+      unarchive:
+        src: /tmp/fzf.tar.gz
+        dest: /usr/local/bin
+        remote_src: yes
+        creates: /usr/local/bin/fzf
+
+    - name: Remove fzf archive
+      file:
+        path: /tmp/fzf.tar.gz
+        state: absent
+  when: fzf_repo_version is version('0.64', '<')
+

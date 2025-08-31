@@ -1,0 +1,62 @@
+- name: Install stow
+  package:
+    name: stow
+    state: present
+  register: stow_pkg
+  failed_when: false
+  changed_when: false
+
+- block:
+    - name: Install build dependencies for stow
+      package:
+        name:
+          - make
+          - perl
+        state: present
+
+    - name: Download and extract GNU stow
+      unarchive:
+        src: https://ftp.gnu.org/gnu/stow/stow-2.4.1.tar.gz
+        dest: /tmp
+        remote_src: yes
+        creates: /tmp/stow-2.4.1
+
+    - name: Build and install GNU Stow from source
+      shell:
+        ./configure
+        make
+        make install
+      args:
+        chdir: /tmp/stow-2.4.1
+    - name: Clean up stow source files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/stow-2.4.1
+        - /tmp/stow-2.4.1.tar.gz
+  when: stow_pkg is failed
+
+- name: Clone dotfiles repo
+  become: true
+  become_user: "{{ ansible_user }}"
+  git:
+    repo: "{{ dotfiles_repo }}"
+    dest: /home/{{ ansible_user }}/.dotfiles
+    version: "{{ dotfiles_branch }}"
+    force: yes
+
+- name: Remove default .bashrc (if exists)
+  become: true
+  become_user: "{{ ansible_user }}"
+  file:
+    path: /home/{{ ansible_user }}/.bashrc
+    state: absent
+
+- name: Run stow to link dotfiles
+  shell: |
+    cd "/home/{{ ansible_user }}/.dotfiles"
+    stow .
+  args:
+    executable: /bin/bash
+

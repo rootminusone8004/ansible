@@ -1,0 +1,34 @@
+- name: Install zsh
+  package:
+    name: zsh
+    state: present
+
+- name: Install Powerlevel10k
+  git:
+    repo: "https://github.com/romkatv/powerlevel10k"
+    dest: "/home/{{ ansible_user }}/.config/zsh/powerlevel10k"
+    version: master
+
+- name: Install zsh-syntax-highlighting
+  git:
+    repo: "https://github.com/zsh-users/zsh-syntax-highlighting"
+    dest: "/home/{{ ansible_user }}/.config/zsh/zsh-syntax-highlighting"
+    version: master
+
+- name: Install zsh-autosuggestions
+  git:
+    repo: "https://github.com/zsh-users/zsh-autosuggestions"
+    dest: "/home/{{ ansible_user }}/.config/zsh/zsh-autosuggestions"
+    version: master
+
+- name: Install zsh-you-should-use
+  git:
+    repo: "https://github.com/MichaelAquilina/zsh-you-should-use"
+    dest: "/home/{{ ansible_user }}/.config/zsh/zsh-you-should-use"
+    version: master
+
+- name: Change default shell to zsh for user
+  user:
+    name: "{{ ansible_user }}"
+    shell: /usr/bin/zsh
+
