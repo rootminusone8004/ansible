@@ -1,0 +1,14 @@
+---
+- name: Install Docker
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Docker install
+      import_tasks: ../tasks/docker.yaml
+      vars:
+        supported_ubuntu_versions: [jammy, focal, bionic]
+        supported_debian_versions: [trixie, bookworm, bullseye]
+        docker_gpg_dest: /etc/apt/keyrings/docker.asc
+        docker_keyring_dir: /etc/apt/keyrings
+        

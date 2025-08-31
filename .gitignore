@@ -1,0 +1,10 @@
+.env
+env
+*.bak
+*.retry
+*.log
+*.pyc
+__pycache__/
+.ansible/
+*.swp
+

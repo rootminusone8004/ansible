@@ -1,0 +1,94 @@
+- name: Ensure OS is Debian or Ubuntu
+  fail:
+    msg: "This playbook only supports Debian and Ubuntu."
+  when: ansible_distribution not in ["Debian", "Ubuntu"]
+
+- name: Check if Debian version is supported
+  fail:
+    msg: "Debian {{ ansible_distribution_release }} is not supported. Supported: {{ supported_debian_versions | join(', ') }}"
+  when:
+    - ansible_distribution == "Debian"
+    - ansible_distribution_release not in supported_debian_versions
+
+- name: Check if Ubuntu version is supported
+  fail:
+    msg: "Ubuntu {{ ansible_distribution_release }} is not supported. Supported: {{ supported_ubuntu_versions | join(', ') }}"
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_release not in supported_ubuntu_versions
+
+- name: Show OS details
+  debug:
+        msg: "{{ ansible_distribution }} {{ ansible_distribution_release }} ({{ ansible_architecture }})"
+
+- name: Remove conflicting Docker-related packages
+  apt:
+    name:
+      - docker.io
+      - docker-doc
+      - docker-compose
+      - podman-docker
+      - containerd
+      - runc
+    state: absent
+    purge: true
+  ignore_errors: true
+
+- name: Install required dependencies
+  apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+    update_cache: true
+
+- name: Create Docker keyring directory
+  file:
+    path: "{{ docker_keyring_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Download Docker GPG key
+  get_url:
+    url: >-
+      https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg
+    dest: "{{ docker_gpg_dest }}"
+    mode: '0644'
+
+- name: Add Docker APT repository
+  apt_repository:
+    repo: >-
+      deb [arch=amd64 signed-by={{ docker_gpg_dest }}]
+      https://download.docker.com/linux/{{ ansible_distribution | lower }}
+      {{ ansible_distribution_release }} stable
+    filename: docker
+    state: present
+
+- name: Update APT cache after adding Docker repo
+  apt:
+    update_cache: true
+
+- name: Install Docker and related packages
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+- name: Start and enable Docker service
+  service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Add current user to docker group
+  user:
+    name: "{{ ansible_user_id }}"
+    groups: docker
+    append: yes
+
