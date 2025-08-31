@@ -1,0 +1,36 @@
+---
+- name: Install Minikube on Linux
+  hosts: all
+  become: true
+  tasks:
+    - name: Docker install
+      import_tasks: ../tasks/docker.yaml
+      vars:
+        supported_ubuntu_versions: [jammy, focal, bionic]
+        supported_debian_versions: [trixie, bookworm, bullseye]
+        docker_gpg_dest: /etc/apt/keyrings/docker.asc
+        docker_keyring_dir: /etc/apt/keyrings
+
+    - name: Kubectl install
+      import_tasks: ../tasks/kubectl.yaml
+      vars:
+        kubectl_version: "v1.30.0"
+
+    - name: Download Minikube binary
+      get_url:
+        url: https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+        dest: /tmp/minikube-linux-amd64
+        mode: '0755'
+
+    - name: Install Minikube binary to /usr/local/bin
+      copy:
+        src: /tmp/minikube-linux-amd64
+        dest: /usr/local/bin/minikube
+        remote_src: yes
+        mode: '0755'
+
+    - name: Remove the downloaded binary
+      file:
+        path: /tmp/minikube-linux-amd64
+        state: absent
+

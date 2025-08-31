@@ -1,0 +1,28 @@
+---
+- name: Install Minikube on Linux
+  hosts: all
+  become: true
+  
+  vars:
+    kind_version: "v0.22.0"
+    
+  tasks:
+    - name: Docker install
+      import_tasks: ../tasks/docker.yaml
+      vars:
+        supported_ubuntu_versions: [jammy, focal, bionic]
+        supported_debian_versions: [trixie, bookworm, bullseye]
+        docker_gpg_dest: /etc/apt/keyrings/docker.asc
+        docker_keyring_dir: /etc/apt/keyrings
+
+    - name: Kubectl install
+      import_tasks: ../tasks/kubectl.yaml
+      vars:
+        kubectl_version: "v1.30.0"
+
+    - name: Download kind binary
+      get_url:
+        url: "https://kind.sigs.k8s.io/dl/{{ kind_version }}/kind-linux-amd64"
+        dest: /usr/local/bin/kind
+        mode: '0755'
+
