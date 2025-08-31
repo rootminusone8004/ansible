@@ -4,24 +4,33 @@
     state: present
 
 - name: Install Powerlevel10k
+  become: true
+  become_user: "{{ ansible_user }}"
   git:
     repo: "https://github.com/romkatv/powerlevel10k"
     dest: "/home/{{ ansible_user }}/.config/zsh/powerlevel10k"
     version: master
 
+
 - name: Install zsh-syntax-highlighting
+  become: true
+  become_user: "{{ ansible_user }}"
   git:
     repo: "https://github.com/zsh-users/zsh-syntax-highlighting"
     dest: "/home/{{ ansible_user }}/.config/zsh/zsh-syntax-highlighting"
     version: master
 
 - name: Install zsh-autosuggestions
+  become: true
+  become_user: "{{ ansible_user }}"
   git:
     repo: "https://github.com/zsh-users/zsh-autosuggestions"
     dest: "/home/{{ ansible_user }}/.config/zsh/zsh-autosuggestions"
     version: master
 
 - name: Install zsh-you-should-use
+  become: true
+  become_user: "{{ ansible_user }}"
   git:
     repo: "https://github.com/MichaelAquilina/zsh-you-should-use"
     dest: "/home/{{ ansible_user }}/.config/zsh/zsh-you-should-use"

@@ -21,6 +21,8 @@
     state: absent
 
 - name: Ensure ~/.local directory exists
+  become: true
+  become_user: "{{ ansible_user }}"
   file:
     path: "/home/{{ ansible_user }}/.local"
     state: directory
@@ -29,7 +31,7 @@
 - name: Move nvim to ~/.local
   copy:
     src: /tmp/nvim
-    dest: /home/{{ ansible_user }}/.local/nvim
+    dest: /home/{{ ansible_user }}/.local
     remote_src: yes
 
 - name: Clean up neovim temp files
