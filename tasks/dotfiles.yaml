@@ -3,8 +3,7 @@
     name: stow
     state: present
   register: stow_pkg
-  failed_when: false
-  changed_when: false
+  ignore_errors: yes
 
 - block:
     - name: Install build dependencies for stow
@@ -22,12 +21,15 @@
         creates: /tmp/stow-2.4.1
 
     - name: Build and install GNU Stow from source
-      shell:
+      shell: |
         ./configure
         make
         make install
       args:
         chdir: /tmp/stow-2.4.1
+        creates: /usr/local/bin/stow
+        executable: /bin/bash 
+
     - name: Clean up stow source files
       file:
         path: "{{ item }}"
@@ -55,6 +57,7 @@
 
 - name: Run stow to link dotfiles
   shell: |
+    export PATH=$PATH:/usr/local/bin
     cd "/home/{{ ansible_user }}/.dotfiles"
     stow .
   args:

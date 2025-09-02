@@ -8,12 +8,11 @@
       import_tasks: ../tasks/update.yaml
 
   tasks:
-    - name: Install base packages (Debian)
-      apt:
+    - name: Install base packages
+      package:
         name:
           - gcc
           - python3
-          - black
           - git
           - btop
           - curl
@@ -22,22 +21,6 @@
           - tar
           - tmux
         state: present
-      when: ansible_os_family == 'Debian'
-
-    - name: Install base packages (RedHat)
-      apt:
-        name:
-          - gcc
-          - python3
-          - git
-          - htop
-          - curl
-          - wget
-          - unzip
-          - tar
-          - tmux
-        state: present
-      when: ansible_os_family == 'RedHat'
 
     - name: zsh setup
       import_tasks: ../tasks/zsh.yaml

@@ -17,12 +17,7 @@
         name: epel-release
         state: present
       register: epel_dnf_result
-      failed_when: false
-      changed_when: epel_dnf_result.rc == 0
- 
-    - name: Debug EPEL DNF status
-      debug:
-        var: epel_dnf_result
+      ignore_errors: yes
   when: ansible_os_family == 'RedHat'
  
 - name: Fallback to manual EPEL install if DNF failed
@@ -37,7 +32,4 @@
         name: /tmp/epel-release.rpm
         disable_gpg_check: yes
         state: present
-  when: 
-    - ansible_os_family == 'RedHat'
-    - epel_dnf_result is defined
-    - epel_dnf_result.failed
+  when: epel_dnf_result is failed

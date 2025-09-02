@@ -42,6 +42,14 @@
     - /tmp/nvim
     - /tmp/nvim-linux-x86_64.tar.gz
 
+- name: Ensure .bashrc exists
+  file:
+    path: "/home/{{ ansible_user }}/.bashrc"
+    state: touch
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+
 - name: Ensure ~/.local/nvim/bin is in PATH via .bashrc
   lineinfile:
     path: "/home/{{ ansible_user }}/.bashrc"

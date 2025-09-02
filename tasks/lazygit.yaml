@@ -3,9 +3,8 @@
     name: lazygit
     state: present
   register: lazygit_pkg
-  failed_when: false
-  changed_when: false
-  
+  ignore_errors: yes
+
 - block:
     - name: Download LazyGit binary
       get_url:
