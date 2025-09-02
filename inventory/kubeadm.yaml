@@ -1,0 +1,13 @@
+all:
+  vars:
+    ansible_user: admin
+  children:
+    control_plane:
+      vars:
+        kube_api_advertise_address: 10.123.1.230
+      hosts:
+        54.174.76.2:
+    workers:
+      hosts:
+        54.80.221.141:
+        3.90.177.156:

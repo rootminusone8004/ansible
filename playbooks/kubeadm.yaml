@@ -1,0 +1,150 @@
+---
+- name: Setup Kubernetes Nodes (Controller + Workers)
+  hosts: all
+  become: yes
+  tasks:
+    - name: Disable swap
+      command: swapoff -a
+      when: ansible_swaptotal_mb > 0
+
+    - name: Create /etc/sysctl.d/k8s.conf with ip_forward enabled
+      copy:
+        dest: /etc/sysctl.d/k8s.conf
+        content: |
+          net.ipv4.ip_forward = 1
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Reload sysctl settings
+      command: sysctl --system
+
+    - name: Docker install
+      import_tasks: ../tasks/docker.yaml
+      vars:
+        supported_ubuntu_versions: [jammy, focal, bionic]
+        supported_debian_versions: [trixie, bookworm, bullseye]
+        docker_gpg_dest: /etc/apt/keyrings/docker.asc
+        docker_keyring_dir: /etc/apt/keyrings
+
+    - name: Generate default containerd config
+      command: containerd config default
+      register: containerd_config
+
+    - name: Write containerd config to /etc/containerd/config.toml
+      copy:
+        dest: /etc/containerd/config.toml
+        content: "{{ containerd_config.stdout }}"
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Ensure SystemdCgroup is set to true in containerd config
+      replace:
+        path: /etc/containerd/config.toml
+        regexp: '^(\s*)SystemdCgroup\s*=.*$'
+        replace: '\1SystemdCgroup = true'
+
+    - name: Restart containerd service
+      systemd:
+        name: containerd
+        state: restarted
+        enabled: yes
+
+    - name: Update apt package list
+      apt:
+        update_cache: yes
+
+    - name: Install apt transport and dependencies for Kubernetes repo
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gpg
+        state: present
+
+    - name: Add Kubernetes apt keyring directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download Kubernetes Release key and save as keyring
+      ansible.builtin.get_url:
+        url: https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key
+        dest: /tmp/Release.key
+
+    - name: Convert Release.key to gpg keyring
+      command: "gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg /tmp/Release.key"
+      args:
+        creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Clean up temporary Release.key
+      file:
+        path: /tmp/Release.key
+        state: absent
+
+    - name: Add Kubernetes apt repository
+      copy:
+        dest: /etc/apt/sources.list.d/kubernetes.list
+        content: |
+          deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /
+
+    - name: Update apt package list after adding Kubernetes repo
+      apt:
+        update_cache: yes
+
+    - name: Install kubelet, kubeadm, kubectl
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+
+    - name: Hold kubelet, kubeadm, kubectl packages
+      command: apt-mark hold kubelet kubeadm kubectl
+
+- name: Initialize Kubernetes on Controller Node Only
+  hosts: control_plane
+  become: yes
+  tasks:
+    - name: Initialize Kubernetes cluster
+      command: >
+        kubeadm init
+        --apiserver-advertise-address={{ kube_api_advertise_address }}
+        --pod-network-cidr=10.244.0.0/16
+        --cri-socket=unix:///var/run/containerd/containerd.sock
+      args:
+        creates: /etc/kubernetes/admin.conf
+      register: kubeadm_init_output
+
+    - name: Save the kubeadm init output
+      copy: 
+        content: "{{ kubeadm_init_output.stdout }}"
+        dest: "/home/{{ ansible_user }}/kubeadm-init-output.log"
+        mode: '0644'
+
+    - name: Create .kube directory in user home
+      file:
+        path: "/home/{{ ansible_user }}/.kube"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Copy admin.conf to user's kube config
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: "/home/{{ ansible_user }}/.kube/config"
+        remote_src: yes
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+
+    - name: Apply Calico network plugin manifest
+      command: kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.0/manifests/calico.yaml
+      environment:
+        KUBECONFIG: "/home/{{ ansible_user }}/.kube/config"
+
