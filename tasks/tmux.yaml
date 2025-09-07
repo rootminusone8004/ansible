@@ -1,0 +1,13 @@
+- name: Install tmux
+  package:
+    name:
+      - git
+      - tmux
+    state: present
+
+- name: Clone tmux plugin manager (TPM)
+  git:
+    repo: https://github.com/tmux-plugins/tpm
+    dest: "/home/{{ ansible_user }}/.tmux/plugins/tpm"
+    version: master
+  become_user: "{{ ansible_user }}"

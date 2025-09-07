@@ -1,6 +1,8 @@
 - name: Install zsh
   package:
-    name: zsh
+    name:
+      - git
+      - zsh
     state: present
 
 - name: Install Powerlevel10k

@@ -5,6 +5,7 @@
 
   pre_tasks:
     - name: install updates
+      tags: minimal
       import_tasks: ../tasks/update.yaml
 
   tasks:
@@ -19,20 +20,17 @@
           - wget
           - unzip
           - tar
-          - tmux
         state: present
 
     - name: zsh setup
       import_tasks: ../tasks/zsh.yaml
 
-    - name: Clone tmux plugin manager (TPM)
-      git:
-        repo: https://github.com/tmux-plugins/tpm
-        dest: "/home/{{ ansible_user }}/.tmux/plugins/tpm"
-        version: master
-      become_user: "{{ ansible_user }}"
+    - name: tmux setup
+      tags: minimal
+      import_tasks: ../tasks/tmux.yaml
 
     - name: fzf setup
+      tags: minimal
       import_tasks: ../tasks/fzf.yaml
     
     - name: neovim setup
@@ -42,6 +40,7 @@
       import_tasks: ../tasks/lazygit.yaml
 
     - name: dotfiles setup
+      tags: minimal
       import_tasks: ../tasks/dotfiles.yaml
       vars:
         dotfiles_repo: "https://gitlab.com/rootminusone8004/Dotfiles"
