@@ -1,11 +1,9 @@
 - name: Ensure OS is Debian or Ubuntu
-  tags: containerd
   fail:
     msg: "This playbook only supports Debian and Ubuntu."
   when: ansible_distribution not in ["Debian", "Ubuntu"]
 
 - name: Check if Debian version is supported
-  tags: containerd
   fail:
     msg: "Debian {{ ansible_distribution_release }} is not supported. Supported: {{ supported_debian_versions | join(', ') }}"
   when:
@@ -13,7 +11,6 @@
     - ansible_distribution_release not in supported_debian_versions
 
 - name: Check if Ubuntu version is supported
-  tags: containerd
   fail:
     msg: "Ubuntu {{ ansible_distribution_release }} is not supported. Supported: {{ supported_ubuntu_versions | join(', ') }}"
   when:
@@ -21,12 +18,10 @@
     - ansible_distribution_release not in supported_ubuntu_versions
 
 - name: Show OS details
-  tags: containerd
   debug:
         msg: "{{ ansible_distribution }} {{ ansible_distribution_release }} ({{ ansible_architecture }})"
 
 - name: Remove conflicting containerd
-  tags: containerd
   apt:
     name: containerd
     state: absent
@@ -34,6 +29,7 @@
   ignore_errors: true
 
 - name: Remove conflicting Docker-related packages
+  tags: docker_only
   apt:
     name:
       - docker.io
@@ -46,7 +42,6 @@
   ignore_errors: true
 
 - name: Install required dependencies
-  tags: containerd
   apt:
     name:
       - ca-certificates
@@ -57,14 +52,12 @@
     update_cache: true
 
 - name: Create Docker keyring directory
-  tags: containerd
   file:
     path: "{{ docker_keyring_dir }}"
     state: directory
     mode: '0755'
 
 - name: Download Docker GPG key
-  tags: containerd
   get_url:
     url: >-
       https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg
@@ -72,7 +65,6 @@
     mode: '0644'
 
 - name: Add Docker APT repository
-  tags: containerd
   apt_repository:
     repo: >-
       deb [arch=amd64 signed-by={{ docker_gpg_dest }}]
@@ -82,17 +74,16 @@
     state: present
 
 - name: Update APT cache after adding Docker repo
-  tags: containerd
   apt:
     update_cache: true
 
 - name: Install containerd
-  tags: containerd
   apt:
     name: containerd.io
     state: present
 
 - name: Install Docker and related packages
+  tags: docker_only
   apt:
     name:
       - docker-ce
@@ -102,14 +93,15 @@
     state: present
 
 - name: Start and enable Docker service
+  tags: docker_only
   service:
     name: docker
     state: started
     enabled: true
 
 - name: Add current user to docker group
+  tags: docker_only
   user:
     name: "{{ ansible_user_id }}"
     groups: docker
     append: yes
-
