@@ -11,4 +11,6 @@
         supported_debian_versions: [trixie, bookworm, bullseye]
         docker_gpg_dest: /etc/apt/keyrings/docker.asc
         docker_keyring_dir: /etc/apt/keyrings
-        
+    
+    - name: LazyDocker install
+      import_tasks: ../tasks/lazydocker.yaml
