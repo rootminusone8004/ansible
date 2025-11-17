@@ -1,19 +1,68 @@
-- name: Download Neovim tarball
-  get_url:
-    url: https://github.com/neovim/neovim/releases/download/v0.11.3/nvim-linux-x86_64.tar.gz
-    dest: /tmp/nvim-linux-x86_64.tar.gz
-    mode: '0644'
+- name: Try to get nvim version from dnf or apt
+  block:
+    - name: Get version from dnf
+      shell: "dnf info neovim | awk '/^Version/ {print $3}'"
+      register: nvim_package_version
+      failed_when: false
+      changed_when: false
+      when: ansible_facts['pkg_mgr'] == 'dnf'
 
-- name: Extract Neovim tarball
-  unarchive:
-    src: /tmp/nvim-linux-x86_64.tar.gz
-    dest: /tmp
-    remote_src: yes
+    - name: Get version from apt
+      shell: "apt show neovim 2>/dev/null | awk '/^Version:/ {print $2}'"
+      register: nvim_package_version
+      failed_when: false
+      changed_when: false
+      when: ansible_facts['pkg_mgr'] == 'apt'
 
-- name: Rename extracted folder to 'nvim'
-  command: mv /tmp/nvim-linux-x86_64 /tmp/nvim
-  args:
-    creates: /tmp/nvim
+- name: Set default version if nvim not found in repo
+  set_fact:
+    nvim_repo_version: "{{ nvim_package_version.stdout | default('0.0') }}"
+
+- name: Install nvim via package manager if version >= 0.64
+  package:
+    name: neovim
+    state: present
+  when: nvim_repo_version is version('0.64', '>=')
+
+- name: Install Neovim for x86_64
+  block:
+    - name: Download Neovim tarball (x86_64)
+      get_url:
+        url: https://github.com/neovim/neovim/releases/download/{{ nvim_version }}/nvim-linux-x86_64.tar.gz
+        dest: /tmp/nvim-linux-x86_64.tar.gz
+        mode: "0644"
+
+    - name: Extract Neovim tarball (x86_64)
+      unarchive:
+        src: /tmp/nvim-linux-x86_64.tar.gz
+        dest: /tmp
+        remote_src: yes
+
+    - name: Rename extracted folder to 'nvim' (x86_64)
+      command: mv /tmp/nvim-linux-x86_64 /tmp/nvim
+      args:
+        creates: /tmp/nvim
+  when: ansible_facts['architecture'] == 'x86_64'
+
+- name: Install Neovim for arm64
+  block:
+    - name: Download Neovim tarball (arm64)
+      get_url:
+        url: https://github.com/neovim/neovim/releases/download/{{ nvim_version }}/nvim-linux-arm64.tar.gz
+        dest: /tmp/nvim-linux-arm64.tar.gz
+        mode: "0644"
+
+    - name: Extract Neovim tarball (arm64)
+      unarchive:
+        src: /tmp/nvim-linux-arm64.tar.gz
+        dest: /tmp
+        remote_src: yes
+
+    - name: Rename extracted folder to 'nvim' (arm64)
+      command: mv /tmp/nvim-linux-arm64 /tmp/nvim
+      args:
+        creates: /tmp/nvim
+  when: ansible_facts['architecture'] in ['aarch64', 'arm64']
 
 - name: remove ~/.local/nvim if exists
   file:
@@ -26,7 +75,7 @@
   file:
     path: "/home/{{ ansible_user }}/.local"
     state: directory
-    mode: '0755'
+    mode: "0755"
 
 - name: Move nvim to ~/.local
   copy:
@@ -41,6 +90,7 @@
   loop:
     - /tmp/nvim
     - /tmp/nvim-linux-x86_64.tar.gz
+    - /tmp/nvim-linux-arm64.tar.gz
 
 - name: Ensure .bashrc exists
   file:
@@ -48,12 +98,11 @@
     state: touch
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-    mode: '0644'
+    mode: "0644"
 
 - name: Ensure ~/.local/nvim/bin is in PATH via .bashrc
   lineinfile:
     path: "/home/{{ ansible_user }}/.bashrc"
     regexp: 'export PATH=\$HOME/\.local/nvim/bin:\$PATH'
-    line: 'export PATH=$HOME/.local/nvim/bin:$PATH'
+    line: "export PATH=$HOME/.local/nvim/bin:$PATH"
     state: present
-

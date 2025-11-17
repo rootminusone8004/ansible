@@ -2,21 +2,21 @@
   block:
     - name: Get version from dnf
       shell: "dnf info fzf | awk '/^Version/ {print $3}'"
-      register: fzf_version
+      register: fzf_package_version
       failed_when: false
       changed_when: false
-      when: ansible_pkg_mgr == 'dnf'
+      when: ansible_facts['pkg_mgr'] == 'dnf'
 
     - name: Get version from apt
       shell: "apt show fzf 2>/dev/null | awk '/^Version:/ {print $2}'"
-      register: fzf_version
+      register: fzf_package_version
       failed_when: false
       changed_when: false
-      when: ansible_pkg_mgr == 'apt'
+      when: ansible_facts['pkg_mgr'] == 'apt'
 
 - name: Set default version if fzf not found in repo
   set_fact:
-    fzf_repo_version: "{{ fzf_version.stdout | default('0.0') }}"
+    fzf_repo_version: "{{ fzf_package_version.stdout | default('0.0') }}"
 
 - name: Install fzf via package manager if version >= 0.64
   package:
@@ -25,10 +25,21 @@
   when: fzf_repo_version is version('0.64', '>=')
 
 - block:
-    - name: Download fzf binary archive
-      get_url:
-        url: https://github.com/junegunn/fzf/releases/download/v0.64.0/fzf-0.64.0-linux_amd64.tar.gz
-        dest: /tmp/fzf.tar.gz
+    - name: Install fzf for x86_64
+      block:
+        - name: Download fzf binary (x86_64)
+          get_url:
+            url: https://github.com/junegunn/fzf/releases/download/v{{ fzf_version }}/fzf-{{ fzf_version }}-linux_amd64.tar.gz
+            dest: /tmp/fzf.tar.gz
+      when: ansible_facts['architecture'] == 'x86_64'
+
+    - name: Install fzf for arm64
+      block:
+        - name: Download fzf binary (arm64)
+          get_url:
+            url: https://github.com/junegunn/fzf/releases/download/v{{ fzf_version }}/fzf-{{ fzf_version }}-linux_arm64.tar.gz
+            dest: /tmp/fzf.tar.gz
+      when: ansible_facts['architecture'] in ['aarch64', 'arm64']
 
     - name: Extract and install fzf
       unarchive:
@@ -42,4 +53,3 @@
         path: /tmp/fzf.tar.gz
         state: absent
   when: fzf_repo_version is version('0.64', '<')
-
