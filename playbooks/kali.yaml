@@ -1,0 +1,61 @@
+- name: Setup development environment
+  hosts: all
+  become: true
+
+  pre_tasks:
+    - name: install updates
+      tags: minimal
+      import_tasks: ../tasks/update.yaml
+
+  tasks:
+    - name: Install base packages
+      package:
+        name:
+          - gcc
+          - openvpn
+          - nmap
+          - firefox-esr
+          - burpsuite
+          - python3
+          - git
+          - btop
+          - curl
+          - wget
+          - unzip
+          - tar
+        state: present
+
+    - name: zsh setup
+      import_tasks: ../tasks/zsh.yaml
+
+    - name: tmux setup
+      tags: minimal
+      import_tasks: ../tasks/tmux.yaml
+
+    - name: fzf setup
+      tags: minimal
+      import_tasks: ../tasks/fzf.yaml
+
+    - name: neovim setup
+      import_tasks: ../tasks/nvim.yaml
+
+    - name: lazygit setup
+      import_tasks: ../tasks/lazygit.yaml
+
+    - name: Dotfiles for servers
+      tags: minimal
+      block:
+        - import_tasks: ../tasks/dotfiles.yaml
+          vars:
+            dotfiles_repo: "https://gitlab.com/rootminusone8004/Dotfiles"
+            dotfiles_branch: "server"
+      when: ansible_facts['architecture'] == 'x86_64'
+
+    - name: Dotfiles for raspberry pi
+      tags: minimal
+      block:
+        - import_tasks: ../tasks/dotfiles.yaml
+          vars:
+            dotfiles_repo: "https://gitlab.com/rootminusone8004/Dotfiles"
+            dotfiles_branch: "raspi"
+      when: ansible_facts['architecture'] in ['aarch64','arm64','armv7l']
