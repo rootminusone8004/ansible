@@ -48,12 +48,33 @@
     version: "{{ dotfiles_branch }}"
     force: yes
 
-- name: Remove default .bashrc (if exists)
+- name: Check if .bashrc exists
   become: true
   become_user: "{{ ansible_user }}"
-  file:
+  ansible.builtin.stat:
     path: /home/{{ ansible_user }}/.bashrc
-    state: absent
+  register: bashrc_stat
+
+- name: Backup existing .bashrc
+  become: true
+  become_user: "{{ ansible_user }}"
+  ansible.builtin.command:
+    cmd: mv /home/{{ ansible_user }}/.bashrc /home/{{ ansible_user }}/.bashrc.bak
+  when: bashrc_stat.stat.exists
+
+- name: Check if .zshrc exists
+  become: true
+  become_user: "{{ ansible_user }}"
+  ansible.builtin.stat:
+    path: /home/{{ ansible_user }}/.zshrc
+  register: zshrc_stat
+
+- name: Backup existing .zshrc
+  become: true
+  become_user: "{{ ansible_user }}"
+  ansible.builtin.command:
+    cmd: mv /home/{{ ansible_user }}/.zshrc /home/{{ ansible_user }}/.zshrc.bak
+  when: zshrc_stat.stat.exists
 
 - name: Run stow to link dotfiles
   shell: |
