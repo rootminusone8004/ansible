@@ -14,8 +14,6 @@
           - gcc
           - openvpn
           - nmap
-          - firefox-esr
-          - burpsuite
           - python3
           - git
           - btop
