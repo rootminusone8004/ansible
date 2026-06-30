@@ -8,52 +8,14 @@
       import_tasks: ../tasks/update.yaml
 
   tasks:
-    - name: Install base packages
+    - name: Install special kali packages
       package:
         name:
-          - gcc
           - openvpn
           - nmap
-          - python3
-          - git
-          - btop
-          - curl
-          - wget
-          - unzip
-          - tar
+          - gobuster
+          - wordlists
+          - seclists
+          - metasploit-framework
+          - sqlmap
         state: present
-
-    - name: zsh setup
-      import_tasks: ../tasks/zsh.yaml
-
-    - name: tmux setup
-      tags: minimal
-      import_tasks: ../tasks/tmux.yaml
-
-    - name: fzf setup
-      tags: minimal
-      import_tasks: ../tasks/fzf.yaml
-
-    - name: neovim setup
-      import_tasks: ../tasks/nvim.yaml
-
-    - name: lazygit setup
-      import_tasks: ../tasks/lazygit.yaml
-
-    - name: Dotfiles for servers
-      tags: minimal
-      block:
-        - import_tasks: ../tasks/dotfiles.yaml
-          vars:
-            dotfiles_repo: "https://gitlab.com/rootminusone8004/Dotfiles"
-            dotfiles_branch: "server"
-      when: ansible_facts['architecture'] == 'x86_64'
-
-    - name: Dotfiles for raspberry pi
-      tags: minimal
-      block:
-        - import_tasks: ../tasks/dotfiles.yaml
-          vars:
-            dotfiles_repo: "https://gitlab.com/rootminusone8004/Dotfiles"
-            dotfiles_branch: "raspi"
-      when: ansible_facts['architecture'] in ['aarch64','arm64','armv7l']
