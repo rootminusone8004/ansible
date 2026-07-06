@@ -69,7 +69,7 @@
 - name: Install nvim based packages
   package:
     name:
-      - treesitter-cli
+      - tree-sitter-cli
     state: present
   when: ansible_facts['os_family'] == 'Debian'
 

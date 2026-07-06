@@ -13,9 +13,23 @@
         name:
           - openvpn
           - nmap
+          - grc
           - gobuster
           - wordlists
           - seclists
           - metasploit-framework
           - sqlmap
         state: present
+
+    - name: Append nmap configuration to /etc/grc.conf
+      ansible.builtin.blockinfile:
+        path: /etc/grc.conf
+        insertafter: EOF
+        marker: ""
+        block: |
+          # nmap file
+          \b\w+\b.*nmap\b
+          conf.nmap
+    
+          \b\w+\b*nmap.txt\b
+          conf.nmap
