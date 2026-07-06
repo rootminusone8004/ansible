@@ -66,6 +66,13 @@
     - /tmp/nvim-linux-x86_64.tar.gz
     - /tmp/nvim-linux-arm64.tar.gz
 
+- name: Install nvim based packages
+  package:
+    name:
+      - treesitter-cli
+    state: present
+  when: ansible_facts['os_family'] == 'Debian'
+
 - name: Ensure .bashrc exists
   file:
     path: "/home/{{ ansible_user }}/.bashrc"
