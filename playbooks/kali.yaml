@@ -21,6 +21,39 @@
           - sqlmap
         state: present
 
+    - name: Ensure tmux resurrect directory exists
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user_id }}/.local/share/tmux/resurrect"
+        state: directory
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_gid }}"
+        mode: "0755"
+
+    - name: Install tmux resurrect last file
+      ansible.builtin.copy:
+        dest: "/home/{{ ansible_user_id }}/.local/share/tmux/resurrect/last"
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_gid }}"
+        mode: "0644"
+        content: |
+          pane	action	1	1	:*	1	{{ ansible_hostname }}	:/home/{{ ansible_user_id }}	1	zsh	:
+          pane	general	1	0	:-	1	{{ ansible_hostname }}	:/home/{{ ansible_user_id }}	1	zsh	:
+          pane	general	2	1	:*	1	{{ ansible_hostname }}	:/home/{{ ansible_user_id }}	1	zsh	:
+          pane	general	3	0	:##	1	{{ ansible_hostname }}	:/home/{{ ansible_user_id }}/vpn	1	zsh	:
+          pane	scan	1	1	:##*	1	{{ ansible_hostname }}	:/home/{{ ansible_user_id }}	1	zsh	:
+          pane	scan	2	0	:##-	1	{{ ansible_hostname }}	:/home/{{ ansible_user_id }}	1	zsh	:
+          pane	ssh	1	0	:##-	1	{{ ansible_hostname }}	:/home/{{ ansible_user_id }}	1	zsh	:
+          pane	ssh	2	1	:##*	1	{{ ansible_hostname }}	:/home/{{ ansible_user_id }}	1	zsh	:
+          window	action	1	:general	1	:*	b25e,80x24,0,0,1	off
+          window	general	1	:general	0	:-	b25f,80x24,0,0,2	off
+          window	general	2	:extra	1	:*	b260,80x24,0,0,3	off
+          window	general	3	:vpn	0	:##	b261,80x24,0,0,4	off
+          window	scan	1	:nmap	1	:##*	b263,80x24,0,0,6	off
+          window	scan	2	:extra	0	:##-	b264,80x24,0,0,7	off
+          window	ssh	1	:netcat	0	:##-	b265,80x24,0,0,8	off
+          window	ssh	2	:extra	1	:##*	b266,80x24,0,0,9	off
+          state	action	general
+
     - name: Append nmap configuration to /etc/grc.conf
       ansible.builtin.blockinfile:
         path: /etc/grc.conf
