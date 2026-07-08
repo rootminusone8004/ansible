@@ -38,14 +38,18 @@
         mode: "0644"
         content: |
           pane	action	1	1	:*	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
+          pane	action	2	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	msfconsole  :
+          pane	action	3	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
           pane	general	1	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
           pane	general	2	1	:*	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          pane	general	3	0	:##	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}/vpn	1	zsh	:
-          pane	scan	1	1	:##*	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          pane	scan	2	0	:##-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          pane	ssh	1	0	:##-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          pane	ssh	2	1	:##*	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
+          pane	general	3	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}/vpn	1	zsh	:
+          pane	scan	1	1	:*	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
+          pane	scan	2	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
+          pane	ssh	1	0	:*	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
+          pane	ssh	2	1	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
           window	action	1	:general	1	:*	b25e,80x24,0,0,1	off
+          window	action	2	:msf	0	:-	b267,80x24,0,0,10	off
+          window	action	3	:extra	0	:-	b268,80x24,0,0,11	off
           window	general	1	:general	0	:-	b25f,80x24,0,0,2	off
           window	general	2	:extra	1	:*	b260,80x24,0,0,3	off
           window	general	3	:vpn	0	:##	b261,80x24,0,0,4	off
