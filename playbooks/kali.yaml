@@ -38,7 +38,7 @@
         mode: "0644"
         content: |
           pane	action	1	1	:*	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          pane	action	2	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	msfconsole  :
+          pane	action	2	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh :
           pane	action	3	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
           pane	general	1	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
           pane	general	2	1	:*	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
