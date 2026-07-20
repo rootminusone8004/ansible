@@ -1,0 +1,11 @@
+---
+all:
+  children:
+    lab_servers:
+      hosts:
+        aws-lab-server:
+          ansible_host: 192.168.0.1
+          ansible_user: admin
+
+      vars:
+        ansible_python_interpreter: /usr/bin/python3

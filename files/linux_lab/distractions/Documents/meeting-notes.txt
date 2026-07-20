@@ -1,0 +1,6 @@
+Team meeting notes
+
+Tasks:
+- Update server packages
+- Check nginx logs
+- Review backup process

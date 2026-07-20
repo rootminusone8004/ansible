@@ -1,0 +1,55 @@
+linux_lab_count: 25
+
+linux_lab_flags:
+  lab1: "lab1_linux_intro_7d293e"
+  lab2: "lab2_linux_intro_dff748"
+  lab3: "lab3_linux_intro_b7dfd2"
+  lab4: "lab4_linux_intro_f6cbc3"
+  lab5: "lab5_linux_intro_1b13de"
+  lab6: "lab6_linux_intro_f92aa1"
+  lab7: "lab7_linux_intro_3cde36"
+  lab8: "lab8_linux_intro_d8ba4e"
+  lab9: "lab9_linux_intro_61c19f"
+  lab10: "lab10_linux_intro_366e16"
+  lab11: "lab11_linux_intro_9d177b"
+  lab12: "lab12_linux_intro_3fb5c0"
+  lab13: "lab13_linux_intro_c77c14"
+  lab14: "lab14_linux_intro_41a1da"
+  lab15: "lab15_linux_intro_26e891"
+  lab16: "lab16_linux_intro_6c7d15"
+  lab17: "lab17_linux_intro_1a3858"
+  lab18: "lab18_linux_intro_492e3d"
+  lab19: "lab19_linux_intro_4fa583"
+  lab20: "lab20_linux_intro_f26094"
+  lab21: "lab21_linux_intro_5cadb6"
+  lab22: "lab22_linux_intro_099e2d"
+  lab23: "lab23_linux_intro_5968a1"
+  lab24: "lab24_linux_intro_019cb5"
+  lab25: "lab25_linux_intro_f1516f"
+
+flag_locations:
+  lab1: /home/student/.cache/.flag
+  lab2: /home/student/Documents/archive/.flag
+  lab3: /home/student/backups/old/.flag
+  lab4: /home/student/.secret/.flag
+  lab5: /home/student/projects/.hidden/.flag
+  lab6: /home/student/tmp/.flag
+  lab7: /home/student/logs/archive/.flag
+  lab8: /home/student/downloads/.flag
+  lab9: /home/student/Documents/.backup/.flag
+  lab10: /home/student/scripts/.flag
+  lab11: /home/student/.config/.flag
+  lab12: /home/student/work/.flag
+  lab13: /home/student/archive/.flag
+  lab14: /home/student/data/.flag
+  lab15: /home/student/test/.flag
+  lab16: /home/student/.local/.flag
+  lab17: /home/student/backups/.flag
+  lab18: /home/student/old/.flag
+  lab19: /home/student/files/.flag
+  lab20: /home/student/reports/.flag
+  lab21: /home/student/dev/.flag
+  lab22: /home/student/lab/.flag
+  lab23: /home/student/notes/.flag
+  lab24: /home/student/storage/.flag
+  lab25: /home/student/.hidden/.flag

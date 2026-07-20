@@ -1,0 +1,97 @@
+---
+- name: Install Docker
+  apt:
+    name:
+      - docker.io
+      - python3-docker
+    state: present
+    update_cache: yes
+
+
+- name: Enable Docker
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+
+- name: Create lab build directory
+  file:
+    path: /opt/linux-lab
+    state: directory
+    mode: "0755"
+
+
+- name: Copy Linux lab Docker build context
+  copy:
+    src: ../files/linux_lab/
+    dest: /opt/linux-lab/
+    mode: preserve
+
+
+- name: Build Linux lab image
+  community.docker.docker_image:
+    name: linux-lab
+    source: build
+    build:
+      path: /opt/linux-lab
+    force_source: yes
+
+
+- name: Remove old lab containers
+  community.docker.docker_container:
+    name: "lab{{ item }}"
+    state: absent
+  loop: "{{ range(1,26) | list }}"
+
+
+- name: Create student lab containers
+  community.docker.docker_container:
+    name: "lab{{ item }}"
+    image: linux-lab
+    state: started
+    restart_policy: always
+    published_ports:
+      - "{{ 22000 + item }}:22"
+    memory: 512m
+    cpus: "0.5"
+    pids_limit: 200
+  loop: "{{ range(1,26) | list }}"
+
+
+- name: Create unique CTF flags
+  community.docker.docker_container_exec:
+    container: "{{ lab }}"
+    command: >
+      bash -c "
+      mkdir -p {{ flag_locations[lab] | dirname }} &&
+      echo '{{ linux_lab_flags[lab] }}' > {{ flag_locations[lab] }} &&
+      chown -R student:student /home/student
+      "
+  vars:
+    lab: "lab{{ item }}"
+  loop: "{{ range(1, linux_lab_count + 1) | list }}"
+
+
+- name: Install check command
+  community.docker.docker_container_exec:
+    container: "lab{{ item }}"
+    command: >
+      bash -c "
+      cat > /usr/local/bin/check <<'EOF'
+      #!/bin/bash
+
+      echo 'CTF Lab Status'
+      echo '--------------'
+
+      if find /home/student -name '.flag' -type f | grep -q .; then
+          echo 'FLAG FOUND'
+          cat $(find /home/student -name '.flag' -type f | head -1)
+      else
+          echo 'Challenge not completed'
+      fi
+      EOF
+
+      chmod +x /usr/local/bin/check
+      "
+  loop: "{{ range(1,26) | list }}"
