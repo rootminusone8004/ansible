@@ -1,8 +1,0 @@
----
-- name: Create Linux CTF Lab Containers
-  hosts: lab_servers
-  become: yes
-
-  tasks:
-    - name: Setup Linux lab containers
-      include_tasks: ../tasks/linux_lab.yaml
