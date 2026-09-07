@@ -1,0 +1,13 @@
+---
+# Default variables for kali role
+kali_user: "{{ ansible_user | default(ansible_facts['user_id']) }}"
+kali_user_home: "/home/{{ kali_user }}"
+kali_packages:
+  - openvpn
+  - nmap
+  - grc
+  - gobuster
+  - wordlists
+  - seclists
+  - metasploit-framework
+  - sqlmap

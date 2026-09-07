@@ -1,0 +1,7 @@
+---
+# Default variables for dotfiles role
+dotfiles_user: "{{ ansible_user | default(ansible_facts['user_id']) }}"
+dotfiles_user_home: "/home/{{ dotfiles_user }}"
+dotfiles_repo: "https://gitlab.com/rootminusone8004/Dotfiles"
+dotfiles_branch: "{{ 'raspi' if ansible_facts['architecture'] in ['aarch64', 'arm64', 'armv7l'] else 'server' }}"
+dotfiles_dest: "{{ dotfiles_user_home }}/.dotfiles"

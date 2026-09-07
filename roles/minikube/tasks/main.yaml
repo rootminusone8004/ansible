@@ -1,0 +1,14 @@
+---
+- name: Determine architecture for minikube
+  ansible.builtin.set_fact:
+    minikube_arch: "{{ 'amd64' if ansible_facts['architecture'] == 'x86_64' else 'arm64' }}"
+  when: ansible_facts['architecture'] in ['x86_64', 'aarch64', 'arm64']
+
+- name: Download and install Minikube binary
+  ansible.builtin.get_url:
+    url: >-
+      {{ 'https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-' ~ minikube_arch
+         if minikube_version == 'latest'
+         else 'https://github.com/kubernetes/minikube/releases/download/' ~ minikube_version ~ '/minikube-linux-' ~ minikube_arch }}
+    dest: "{{ minikube_bin_dir }}/minikube"
+    mode: "0755"

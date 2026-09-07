@@ -1,0 +1,52 @@
+---
+- name: Check fzf version in package manager
+  block:
+    - name: Get fzf version from dnf
+      ansible.builtin.shell: "dnf info fzf | awk '/^Version/ {print $3}'"
+      register: fzf_dnf_ver
+      failed_when: false
+      changed_when: false
+      when: ansible_facts['pkg_mgr'] == 'dnf'
+
+    - name: Get fzf version from apt
+      ansible.builtin.shell: "apt show fzf 2>/dev/null | awk '/^Version:/ {print $2}'"
+      register: fzf_apt_ver
+      failed_when: false
+      changed_when: false
+      when: ansible_facts['pkg_mgr'] == 'apt'
+
+- name: Set detected package manager version fact
+  ansible.builtin.set_fact:
+    fzf_repo_version: "{{ (fzf_dnf_ver.stdout | default('')) if ansible_facts['pkg_mgr'] == 'dnf' else (fzf_apt_ver.stdout | default('0.0')) }}"
+
+- name: Install fzf via package manager if repository version is recent
+  ansible.builtin.package:
+    name: fzf
+    state: present
+  when: (fzf_repo_version | default('0.0')) is version(fzf_min_package_version, '>=')
+
+- name: Install fzf from GitHub binary releases if repo version is too old or missing
+  when: (fzf_repo_version | default('0.0')) is version(fzf_min_package_version, '<')
+  block:
+    - name: Determine architecture for fzf download
+      ansible.builtin.set_fact:
+        fzf_arch: "{{ 'amd64' if ansible_facts['architecture'] == 'x86_64' else 'arm64' }}"
+      when: ansible_facts['architecture'] in ['x86_64', 'aarch64', 'arm64']
+
+    - name: Download fzf release archive
+      ansible.builtin.get_url:
+        url: "https://github.com/junegunn/fzf/releases/download/v{{ fzf_version }}/fzf-{{ fzf_version }}-linux_{{ fzf_arch }}.tar.gz"
+        dest: /tmp/fzf.tar.gz
+        mode: "0644"
+
+    - name: Extract fzf binary to destination
+      ansible.builtin.unarchive:
+        src: /tmp/fzf.tar.gz
+        dest: "{{ fzf_bin_dir }}"
+        remote_src: true
+        creates: "{{ fzf_bin_dir }}/fzf"
+
+    - name: Clean up temporary fzf archive
+      ansible.builtin.file:
+        path: /tmp/fzf.tar.gz
+        state: absent

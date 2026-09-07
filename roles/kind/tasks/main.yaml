@@ -1,0 +1,11 @@
+---
+- name: Determine architecture for kind
+  ansible.builtin.set_fact:
+    kind_arch: "{{ 'amd64' if ansible_facts['architecture'] == 'x86_64' else 'arm64' }}"
+  when: ansible_facts['architecture'] in ['x86_64', 'aarch64', 'arm64']
+
+- name: Download kind binary
+  ansible.builtin.get_url:
+    url: "https://kind.sigs.k8s.io/dl/{{ kind_version }}/kind-linux-{{ kind_arch }}"
+    dest: "{{ kind_bin_dir }}/kind"
+    mode: "0755"

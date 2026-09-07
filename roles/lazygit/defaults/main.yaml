@@ -1,0 +1,4 @@
+---
+# Default variables for lazygit role
+lazygit_version: "0.56.0"
+lazygit_bin_dir: /usr/local/bin

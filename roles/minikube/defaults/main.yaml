@@ -1,0 +1,4 @@
+---
+# Default variables for minikube role
+minikube_version: "latest"
+minikube_bin_dir: /usr/local/bin

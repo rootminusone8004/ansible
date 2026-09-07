@@ -1,0 +1,42 @@
+---
+- name: Attempt to install lazygit via system package manager
+  ansible.builtin.package:
+    name: lazygit
+    state: present
+  register: lazygit_pkg_install
+  ignore_errors: true
+
+- name: Install lazygit from GitHub releases if package manager installation failed
+  when: lazygit_pkg_install is failed
+  block:
+    - name: Determine architecture for lazygit
+      ansible.builtin.set_fact:
+        lazygit_arch: "{{ 'x86_64' if ansible_facts['architecture'] == 'x86_64' else 'arm64' }}"
+      when: ansible_facts['architecture'] in ['x86_64', 'aarch64', 'arm64']
+
+    - name: Download LazyGit binary archive
+      ansible.builtin.get_url:
+        url: "https://github.com/jesseduffield/lazygit/releases/download/v{{ lazygit_version }}/lazygit_{{ lazygit_version }}_Linux_{{ lazygit_arch }}.tar.gz"
+        dest: /tmp/lazygit.tar.gz
+        mode: "0644"
+
+    - name: Extract LazyGit archive
+      ansible.builtin.unarchive:
+        src: /tmp/lazygit.tar.gz
+        dest: /tmp
+        remote_src: true
+
+    - name: Move lazygit binary to target binary directory
+      ansible.builtin.copy:
+        src: /tmp/lazygit
+        dest: "{{ lazygit_bin_dir }}/lazygit"
+        mode: "0755"
+        remote_src: true
+
+    - name: Clean up temporary LazyGit files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/lazygit
+        - /tmp/lazygit.tar.gz

@@ -1,0 +1,9 @@
+---
+# Master Site Playbook
+- name: Run Basic Workstation & Server Setup
+  ansible.builtin.import_playbook: basic_setup.yaml
+  tags: [setup, workstation]
+
+- name: Run Docker Setup
+  ansible.builtin.import_playbook: docker.yaml
+  tags: [docker]

@@ -1,73 +1,9 @@
-- name: Setup development environment
+---
+- name: Setup Kali Security Environment
   hosts: all
   become: true
-
-  pre_tasks:
-    - name: install updates
-      tags: minimal
-      import_tasks: ../tasks/update.yaml
-
-  tasks:
-    - name: Install special kali packages
-      package:
-        name:
-          - openvpn
-          - nmap
-          - grc
-          - gobuster
-          - wordlists
-          - seclists
-          - metasploit-framework
-          - sqlmap
-        state: present
-
-    - name: Ensure tmux resurrect directory exists
-      become: true
-      ansible.builtin.file:
-        path: "/home/{{ ansible_user }}/.local/share/tmux/resurrect"
-        state: directory
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-        mode: "0755"
-
-    - name: Install tmux resurrect last file
-      ansible.builtin.copy:
-        dest: "/home/{{ ansible_user }}/.local/share/tmux/resurrect/last"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-        mode: "0644"
-        content: |
-          pane	action	1	1	:*	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          pane	action	2	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh :
-          pane	action	3	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          pane	general	1	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          pane	general	2	1	:*	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          pane	general	3	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          pane	scan	1	1	:*	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          pane	scan	2	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          pane	ssh	1	1	:*	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          pane	ssh	2	0	:-	1	{{ ansible_facts.hostname }}	:/home/{{ ansible_user }}	1	zsh	:
-          window	action	1	:general	1	:*	b25e,80x24,0,0,1	off
-          window	action	2	:msf	0	:-	b267,80x24,0,0,10	off
-          window	action	3	:extra	0	:-	b268,80x24,0,0,11	off
-          window	general	1	:general	0	:-	b25f,80x24,0,0,2	off
-          window	general	2	:extra	1	:*	b260,80x24,0,0,3	off
-          window	general	3	:vpn	0	:-	b261,80x24,0,0,4	off
-          window	scan	1	:nmap	1	:*	b263,80x24,0,0,6	off
-          window	scan	2	:extra	0	:-	b264,80x24,0,0,7	off
-          window	ssh	1	:netcat	0	:-	b265,80x24,0,0,8	off
-          window	ssh	2	:extra	1	:*	b266,80x24,0,0,9	off
-          state	action	general
-
-    - name: Append nmap configuration to /etc/grc.conf
-      ansible.builtin.blockinfile:
-        path: /etc/grc.conf
-        insertafter: EOF
-        marker: ""
-        block: |
-          # nmap file
-          \b\w+\b.*nmap\b
-          conf.nmap
-
-          \b\w+\b*nmap.txt\b
-          conf.nmap
+  roles:
+    - role: common
+      tags: [common]
+    - role: kali
+      tags: [kali]

@@ -1,0 +1,12 @@
+---
+# Default variables for common role
+common_upgrade_packages: true
+common_base_packages:
+  - gcc
+  - python3
+  - git
+  - btop
+  - curl
+  - wget
+  - unzip
+  - tar

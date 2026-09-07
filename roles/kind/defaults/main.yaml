@@ -1,0 +1,4 @@
+---
+# Default variables for kind role
+kind_version: "v0.22.0"
+kind_bin_dir: /usr/local/bin

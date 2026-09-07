@@ -1,0 +1,19 @@
+---
+# Default variables for docker role
+docker_supported_ubuntu_versions:
+  - noble
+  - jammy
+  - focal
+  - bionic
+
+docker_supported_debian_versions:
+  - trixie
+  - bookworm
+  - bullseye
+
+docker_keyring_dir: /etc/apt/keyrings
+docker_gpg_dest: "{{ docker_keyring_dir }}/docker.asc"
+
+docker_install_engine: true
+docker_users:
+  - "{{ ansible_user | default(ansible_facts['user_id']) }}"

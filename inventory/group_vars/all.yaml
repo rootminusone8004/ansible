@@ -1,3 +1,9 @@
+---
+# Global group variables across all inventories
+# Role defaults in roles/*/defaults/main.yaml will be used unless overridden here.
+
+# Tool versions
 nvim_version: "v0.12.3"
+neovim_version: "v0.12.3"
 lazygit_version: "0.56.0"
 fzf_version: "0.67.0"

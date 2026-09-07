@@ -1,0 +1,8 @@
+---
+# Default variables for neovim role
+neovim_version: "{{ nvim_version | default('v0.12.3') }}"
+neovim_user: "{{ ansible_user | default(ansible_facts['user_id']) }}"
+neovim_user_home: "/home/{{ neovim_user }}"
+neovim_install_dir: "{{ neovim_user_home }}/.local"
+neovim_extra_packages:
+  - tree-sitter-cli

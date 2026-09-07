@@ -1,0 +1,11 @@
+---
+# Default variables for kubeadm role
+kubeadm_role: node  # 'node' or 'control_plane'
+kubeadm_k8s_version: "v1.34"
+kubeadm_pod_network_cidr: "10.244.0.0/16"
+kubeadm_cri_socket: "unix:///var/run/containerd/containerd.sock"
+kubeadm_calico_manifest_url: "https://raw.githubusercontent.com/projectcalico/calico/v3.26.0/manifests/calico.yaml"
+kubeadm_user: "{{ ansible_user | default(ansible_facts['user_id']) }}"
+kubeadm_user_home: "/home/{{ kubeadm_user }}"
+kubeadm_install_helm: true
+kubeadm_api_advertise_address: "{{ kube_api_advertise_address | default(ansible_facts['default_ipv4']['address'] | default('')) }}"

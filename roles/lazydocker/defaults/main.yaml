@@ -1,0 +1,4 @@
+---
+# Default variables for lazydocker role
+lazydocker_version: "0.24.1"
+lazydocker_bin_dir: /usr/local/bin

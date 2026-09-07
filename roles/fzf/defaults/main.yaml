@@ -1,0 +1,5 @@
+---
+# Default variables for fzf role
+fzf_version: "0.67.0"
+fzf_min_package_version: "0.64"
+fzf_bin_dir: /usr/local/bin

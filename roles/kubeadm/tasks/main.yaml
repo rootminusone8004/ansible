@@ -1,0 +1,8 @@
+---
+- name: Include tasks for kubeadm node preparation
+  ansible.builtin.include_tasks: node.yaml
+  when: kubeadm_role == 'node'
+
+- name: Include tasks for kubeadm control plane initialization
+  ansible.builtin.include_tasks: control_plane.yaml
+  when: kubeadm_role == 'control_plane'

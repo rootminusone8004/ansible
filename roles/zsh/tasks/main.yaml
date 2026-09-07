@@ -1,0 +1,22 @@
+---
+- name: Install zsh and git
+  ansible.builtin.package:
+    name:
+      - git
+      - zsh
+    state: present
+
+- name: Install zsh plugins
+  become: true
+  become_user: "{{ zsh_user }}"
+  ansible.builtin.git:
+    repo: "{{ item.repo }}"
+    dest: "{{ item.dest }}"
+    version: "{{ item.version | default('master') }}"
+  loop: "{{ zsh_plugins }}"
+
+- name: Change default shell to zsh for user
+  ansible.builtin.user:
+    name: "{{ zsh_user }}"
+    shell: "{{ zsh_shell_path }}"
+  when: zsh_set_default_shell | bool

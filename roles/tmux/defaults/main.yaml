@@ -1,0 +1,7 @@
+---
+# Default variables for tmux role
+tmux_user: "{{ ansible_user | default(ansible_facts['user_id']) }}"
+tmux_user_home: "/home/{{ tmux_user }}"
+tmux_tpm_repo: "https://github.com/tmux-plugins/tpm"
+tmux_tpm_version: "master"
+tmux_tpm_dest: "{{ tmux_user_home }}/.tmux/plugins/tpm"

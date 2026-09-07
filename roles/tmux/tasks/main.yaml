@@ -1,0 +1,15 @@
+---
+- name: Install tmux and git
+  ansible.builtin.package:
+    name:
+      - git
+      - tmux
+    state: present
+
+- name: Clone tmux plugin manager (TPM)
+  become: true
+  become_user: "{{ tmux_user }}"
+  ansible.builtin.git:
+    repo: "{{ tmux_tpm_repo }}"
+    dest: "{{ tmux_tpm_dest }}"
+    version: "{{ tmux_tpm_version }}"

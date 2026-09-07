@@ -1,0 +1,4 @@
+---
+# Default variables for kubectl role
+kubectl_version: "v1.30.0"
+kubectl_bin_dir: /usr/local/bin

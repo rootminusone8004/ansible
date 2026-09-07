@@ -1,0 +1,58 @@
+---
+- name: Install Helm
+  when: kubeadm_install_helm | bool
+  block:
+    - name: Download Helm install script
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        dest: /tmp/get_helm.sh
+        mode: "0700"
+
+    - name: Run Helm install script
+      ansible.builtin.command: /tmp/get_helm.sh
+      args:
+        creates: /usr/local/bin/helm
+
+    - name: Clean up Helm install script
+      ansible.builtin.file:
+        path: /tmp/get_helm.sh
+        state: absent
+
+- name: Initialize Kubernetes control plane
+  ansible.builtin.command: >
+    kubeadm init
+    --apiserver-advertise-address={{ kubeadm_api_advertise_address }}
+    --pod-network-cidr={{ kubeadm_pod_network_cidr }}
+    --cri-socket={{ kubeadm_cri_socket }}
+  args:
+    creates: /etc/kubernetes/admin.conf
+  register: kubeadm_init_output
+
+- name: Save kubeadm init output to user home
+  ansible.builtin.copy:
+    content: "{{ kubeadm_init_output.stdout }}"
+    dest: "{{ kubeadm_user_home }}/kubeadm-init-output.log"
+    mode: "0644"
+  when: kubeadm_init_output is changed
+
+- name: Create .kube directory in user home
+  ansible.builtin.file:
+    path: "{{ kubeadm_user_home }}/.kube"
+    state: directory
+    mode: "0755"
+    owner: "{{ kubeadm_user }}"
+    group: "{{ kubeadm_user }}"
+
+- name: Copy admin.conf to user kubeconfig
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ kubeadm_user_home }}/.kube/config"
+    remote_src: true
+    owner: "{{ kubeadm_user }}"
+    group: "{{ kubeadm_user }}"
+    mode: "0600"
+
+- name: Apply Calico network plugin manifest
+  ansible.builtin.command: "kubectl apply -f {{ kubeadm_calico_manifest_url }}"
+  environment:
+    KUBECONFIG: "{{ kubeadm_user_home }}/.kube/config"

@@ -1,0 +1,51 @@
+---
+- name: Install updates (Debian based)
+  ansible.builtin.apt:
+    upgrade: dist
+    update_cache: true
+  when:
+    - common_upgrade_packages | bool
+    - ansible_facts['os_family'] == 'Debian'
+
+- name: Install updates (RedHat based)
+  ansible.builtin.dnf:
+    update_only: true
+    update_cache: true
+  when:
+    - common_upgrade_packages | bool
+    - ansible_facts['os_family'] == 'RedHat'
+
+- name: Install EPEL (RedHat based)
+  when: ansible_facts['os_family'] == 'RedHat'
+  block:
+    - name: Attempt to install EPEL using dnf
+      ansible.builtin.dnf:
+        name: epel-release
+        state: present
+      register: epel_dnf_result
+      ignore_errors: true
+
+    - name: Fallback to manual EPEL install if DNF failed
+      when: epel_dnf_result is failed
+      block:
+        - name: Download EPEL RPM manually
+          ansible.builtin.get_url:
+            url: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_facts['distribution_major_version'] }}.noarch.rpm"
+            dest: /tmp/epel-release.rpm
+            mode: "0644"
+
+        - name: Install downloaded EPEL RPM
+          ansible.builtin.dnf:
+            name: /tmp/epel-release.rpm
+            disable_gpg_check: true
+            state: present
+
+        - name: Clean up downloaded EPEL RPM
+          ansible.builtin.file:
+            path: /tmp/epel-release.rpm
+            state: absent
+
+- name: Install base packages
+  ansible.builtin.package:
+    name: "{{ common_base_packages }}"
+    state: present

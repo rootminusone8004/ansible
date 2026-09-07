@@ -1,0 +1,71 @@
+---
+- name: Determine architecture for Neovim
+  ansible.builtin.set_fact:
+    neovim_arch: "{{ 'x86_64' if ansible_facts['architecture'] == 'x86_64' else 'arm64' }}"
+  when: ansible_facts['architecture'] in ['x86_64', 'aarch64', 'arm64']
+
+- name: Download Neovim release archive
+  ansible.builtin.get_url:
+    url: "https://github.com/neovim/neovim/releases/download/{{ neovim_version }}/nvim-linux-{{ neovim_arch }}.tar.gz"
+    dest: "/tmp/nvim-linux-{{ neovim_arch }}.tar.gz"
+    mode: "0644"
+
+- name: Extract Neovim archive to temp directory
+  ansible.builtin.unarchive:
+    src: "/tmp/nvim-linux-{{ neovim_arch }}.tar.gz"
+    dest: /tmp
+    remote_src: true
+
+- name: Ensure target ~/.local directory exists
+  become: true
+  become_user: "{{ neovim_user }}"
+  ansible.builtin.file:
+    path: "{{ neovim_install_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Remove existing nvim installation directory
+  ansible.builtin.file:
+    path: "{{ neovim_install_dir }}/nvim"
+    state: absent
+
+- name: Move extracted Neovim directory to destination
+  ansible.builtin.command:
+    cmd: "mv /tmp/nvim-linux-{{ neovim_arch }} {{ neovim_install_dir }}/nvim"
+    creates: "{{ neovim_install_dir }}/nvim"
+
+- name: Set correct ownership for installed Neovim
+  ansible.builtin.file:
+    path: "{{ neovim_install_dir }}/nvim"
+    owner: "{{ neovim_user }}"
+    group: "{{ neovim_user }}"
+    recurse: true
+
+- name: Clean up temporary Neovim files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/tmp/nvim-linux-{{ neovim_arch }}.tar.gz"
+    - "/tmp/nvim-linux-{{ neovim_arch }}"
+
+- name: Install extra Neovim packages (Debian)
+  ansible.builtin.package:
+    name: "{{ neovim_extra_packages }}"
+    state: present
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Ensure .bashrc exists for user
+  ansible.builtin.file:
+    path: "{{ neovim_user_home }}/.bashrc"
+    state: touch
+    owner: "{{ neovim_user }}"
+    group: "{{ neovim_user }}"
+    mode: "0644"
+
+- name: Ensure Neovim bin directory is in PATH via .bashrc
+  ansible.builtin.lineinfile:
+    path: "{{ neovim_user_home }}/.bashrc"
+    regexp: 'export PATH=.*\.local/nvim/bin.*'
+    line: "export PATH=$HOME/.local/nvim/bin:$PATH"
+    state: present
