@@ -185,6 +185,9 @@ ansible-playbook playbooks/port_forward.yaml -e 'ports="4512,8888,80:3000"'
 # 🔒 Expose ports with HTTP Basic Auth password protection
 ansible-playbook playbooks/port_forward.yaml -e 'auth=true -e auth_pass="MySecretPassword123!"'
 
+# 🚫 Expose ports and prevent file/notebook downloads
+ansible-playbook playbooks/port_forward.yaml -e 'ports="8888:8889,4512"' -e 'block_downloads=true'
+
 # 🌐 Deploy multi-node Kubernetes cluster
 ansible-playbook -i inventory/kubeadm.yaml playbooks/kubeadm.yaml
 

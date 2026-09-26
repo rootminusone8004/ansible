@@ -36,7 +36,41 @@ server {
     proxy_buffering off;
     proxy_cache off;
 
+{% if port_forward_block_downloads_active | bool %}
+    # --------------------------------------------------------------------------
+    # Download Prevention Rules
+    # --------------------------------------------------------------------------
+{% if port_forward_block_jupyter_files | default(true) | bool %}
+    # Block direct file download endpoint (/files/...)
+    location ^~ /files/ {
+        return 403;
+    }
+{% endif %}
+
+{% if port_forward_block_jupyter_nbconvert | default(true) | bool %}
+    # Block notebook export and download conversions (/nbconvert/...)
+    location ^~ /nbconvert/ {
+        return 403;
+    }
+{% endif %}
+
+    # Block direct downloads of common datasets, archives, documents & binaries
+    location ~* \.({{ port_forward_blocked_extensions | default('zip|tar|gz|tgz|bz2|7z|rar|csv|tsv|parquet|db|sqlite|sql|xlsx?|docx?|pptx?|pdf|exe|sh|bin') }})$ {
+        return 403;
+    }
+{% endif %}
+
     location / {
+{% if port_forward_block_downloads_active | bool %}
+        # Block downloads triggered via query parameter (e.g. ?download=1)
+        if ($arg_download) {
+            return 403;
+        }
+
+        # Suppress attachment headers to prevent forced browser file saves
+        proxy_hide_header Content-Disposition;
+{% endif %}
+
         proxy_pass http://{{ m.local_host }}:{{ m.local_port }};
         proxy_http_version 1.1;
 
@@ -64,6 +98,15 @@ server {
     # to avoid header conflicts with application tokens (such as Jupyter Authorization: token)
     location ~ ^/(api|terminals|lsp)/ {
         auth_basic off;
+
+{% if port_forward_block_downloads_active | bool %}
+        # Prevent API-level downloads (e.g. /api/contents/... ?download=1)
+        if ($arg_download) {
+            return 403;
+        }
+
+        proxy_hide_header Content-Disposition;
+{% endif %}
 
         proxy_pass http://{{ m.local_host }}:{{ m.local_port }};
         proxy_http_version 1.1;

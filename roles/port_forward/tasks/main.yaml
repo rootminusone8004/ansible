@@ -39,11 +39,12 @@
       {%- endfor -%}
       {{ results }}
 
-- name: Determine authentication configuration
+- name: Determine configuration options
   ansible.builtin.set_fact:
     port_forward_auth_active: "{{ (auth | default(port_forward_enable_auth)) | bool }}"
     port_forward_effective_user: "{{ auth_user | default(port_forward_auth_user) }}"
     port_forward_effective_password: "{{ auth_pass | default(auth_password | default(port_forward_auth_password)) }}"
+    port_forward_block_downloads_active: "{{ (block_downloads | default(port_forward_block_downloads)) | bool }}"
 
 - name: Validate port forward mappings (port range 1-65535)
   ansible.builtin.assert:
@@ -219,6 +220,19 @@
       🔓 HTTP Basic Auth: DISABLED (Open Access)
          To enable password protection, re-run with:
            -e 'auth=true -e auth_pass=YourSecretPassword'
+      {% endif %}
+      --------------------------------------------------------------------------------
+      {% if port_forward_block_downloads_active | bool %}
+      🚫 File Downloads: BLOCKED (Protection Active)
+         - Direct file downloads (/files/...) blocked
+         - Notebook exports (/nbconvert/...) blocked
+         - ?download=1 query requests blocked
+         - Direct dataset & archive file extensions blocked
+         - Content-Disposition attachment headers suppressed
+      {% else %}
+      📥 File Downloads: ALLOWED (Default)
+         To block file downloads, re-run with:
+           -e 'block_downloads=true'
       {% endif %}
       --------------------------------------------------------------------------------
       ⚠️  AWS / Cloud Security Group Checklist:

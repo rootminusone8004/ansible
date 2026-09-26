@@ -23,6 +23,12 @@ port_forward_auth_user: "admin"
 port_forward_auth_password: ""
 port_forward_auth_realm: "Restricted Access - Authentication Required"
 
+# Download Prevention (Prevents downloading files, notebooks, datasets, and exports)
+port_forward_block_downloads: false
+port_forward_blocked_extensions: "zip|tar|gz|tgz|bz2|7z|rar|csv|tsv|parquet|db|sqlite|sql|xlsx?|docx?|pptx?|pdf|exe|sh|bin"
+port_forward_block_jupyter_files: true
+port_forward_block_jupyter_nbconvert: true
+
 # Remove default Nginx welcome/placeholder sites to avoid port conflicts (e.g. port 80)
 port_forward_remove_default_site: true
 
