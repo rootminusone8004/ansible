@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  author: rootminusone
+  description: Flexible Nginx reverse proxy role to expose localhost ports to public IP
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Ubuntu
+      versions: [all]
+    - name: Debian
+      versions: [all]
+    - name: EL
+      versions: [all]
+dependencies: []

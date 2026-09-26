@@ -1,0 +1,227 @@
+---
+# ==============================================================================
+# Port Forward Tasks
+# Exposes localhost (127.0.0.1) services to public IP via Nginx Reverse Proxy
+# ==============================================================================
+
+- name: Normalize port forward configuration
+  ansible.builtin.set_fact:
+    port_forward_normalized_mappings: >-
+      {%- set raw = ports | default(nginx_proxy_ports | default(nginx_ports | default(port_forward_ports, true), true), true) -%}
+      {%- if raw is string and ',' in raw -%}
+        {%- set raw_items = raw.split(',') -%}
+      {%- elif raw is not iterable or raw is string or raw is mapping -%}
+        {%- set raw_items = [raw] -%}
+      {%- else -%}
+        {%- set raw_items = raw -%}
+      {%- endif -%}
+      {%- set results = [] -%}
+      {%- for item in raw_items -%}
+        {%- set item_clean = item.strip() if item is string else item -%}
+        {%- if item_clean is mapping -%}
+          {%- set pub = (item_clean.public_port | default(item_clean.port)) | int -%}
+          {%- set loc = (item_clean.local_port | default(item_clean.port | default(pub))) | int -%}
+          {%- set host = item_clean.local_host | default(item_clean.host | default('127.0.0.1')) -%}
+          {%- set auth_req = item_clean.auth | default(true) -%}
+        {%- elif item_clean is string and ':' in item_clean -%}
+          {%- set parts = item_clean.split(':') -%}
+          {%- set pub = parts[0] | trim | int -%}
+          {%- set loc = parts[1] | trim | int -%}
+          {%- set host = '127.0.0.1' -%}
+          {%- set auth_req = true -%}
+        {%- else -%}
+          {%- set pub = item_clean | int -%}
+          {%- set loc = item_clean | int -%}
+          {%- set host = '127.0.0.1' -%}
+          {%- set auth_req = true -%}
+        {%- endif -%}
+        {%- set _ = results.append({'public_port': pub, 'local_port': loc, 'local_host': host, 'auth': auth_req}) -%}
+      {%- endfor -%}
+      {{ results }}
+
+- name: Determine authentication configuration
+  ansible.builtin.set_fact:
+    port_forward_auth_active: "{{ (auth | default(port_forward_enable_auth)) | bool }}"
+    port_forward_effective_user: "{{ auth_user | default(port_forward_auth_user) }}"
+    port_forward_effective_password: "{{ auth_pass | default(auth_password | default(port_forward_auth_password)) }}"
+
+- name: Validate port forward mappings (port range 1-65535)
+  ansible.builtin.assert:
+    that:
+      - item.public_port >= 1 and item.public_port <= 65535
+      - item.local_port >= 1 and item.local_port <= 65535
+    fail_msg: "Invalid port number found in mapping: public={{ item.public_port }}, local={{ item.local_port }}. Ports must be between 1 and 65535."
+  loop: "{{ port_forward_normalized_mappings }}"
+  loop_control:
+    label: "{{ item.public_port }}:{{ item.local_port }}"
+
+- name: Verify no duplicate public ports are configured
+  ansible.builtin.assert:
+    that:
+      - (port_forward_normalized_mappings | map(attribute='public_port') | list | length) ==
+        (port_forward_normalized_mappings | map(attribute='public_port') | list | unique | length)
+    fail_msg: >-
+      Duplicate public ports detected in port mapping configuration!
+      Each public port can only be routed to a single backend service.
+
+- name: Validate authentication password is provided when auth is enabled
+  ansible.builtin.assert:
+    that:
+      - port_forward_effective_password | length > 0
+    fail_msg: >-
+      Authentication is enabled (auth=true), but no password was provided!
+      Please supply a password using -e 'auth_pass=YourPassword' or in your vars.
+  when: port_forward_auth_active | bool
+
+- name: Update apt cache (Debian family)
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_facts['os_family'] | default('') == 'Debian'
+
+- name: Ensure Nginx package is installed
+  ansible.builtin.package:
+    name: nginx
+    state: present
+
+- name: Ensure /etc/nginx/conf.d directory exists
+  ansible.builtin.file:
+    path: /etc/nginx/conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Remove default Nginx site configurations
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/nginx/sites-enabled/default
+    - /etc/nginx/conf.d/default.conf
+  when: port_forward_remove_default_site | bool
+  notify: restart nginx
+
+# ------------------------------------------------------------------------------
+# HTTP Basic Authentication Setup
+# ------------------------------------------------------------------------------
+- name: Hash password for Nginx HTTP Basic Auth
+  ansible.builtin.command:
+    argv:
+      - openssl
+      - passwd
+      - -apr1
+      - "{{ port_forward_effective_password }}"
+  register: port_forward_hashed_password
+  changed_when: false
+  no_log: true
+  when: port_forward_auth_active | bool
+
+- name: Deploy Nginx htpasswd credentials file
+  ansible.builtin.copy:
+    dest: /etc/nginx/.htpasswd
+    content: "{{ port_forward_effective_user }}:{{ port_forward_hashed_password.stdout.strip() }}\n"
+    owner: root
+    group: "{{ 'www-data' if (ansible_facts['os_family'] | default('')) == 'Debian' else 'nginx' }}"
+    mode: "0640"
+  when: port_forward_auth_active | bool
+  notify: restart nginx
+
+- name: Remove htpasswd file if authentication is disabled
+  ansible.builtin.file:
+    path: /etc/nginx/.htpasswd
+    state: absent
+  when: not (port_forward_auth_active | bool)
+  notify: restart nginx
+
+# ------------------------------------------------------------------------------
+# Nginx Dynamic Configuration & Deployment
+# ------------------------------------------------------------------------------
+- name: Remove port forward config if no ports are defined
+  ansible.builtin.file:
+    path: /etc/nginx/conf.d/port_forward.conf
+    state: absent
+  when: (port_forward_normalized_mappings | length) == 0
+  notify: restart nginx
+
+- name: Deploy dynamic port forward Nginx configuration
+  ansible.builtin.template:
+    src: port_forward.conf.j2
+    dest: /etc/nginx/conf.d/port_forward.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: (port_forward_normalized_mappings | length) > 0
+  notify: restart nginx
+
+- name: Validate Nginx configuration
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Ensure Nginx service is enabled and started
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Flush handlers to apply configuration immediately
+  ansible.builtin.meta: flush_handlers
+
+# ------------------------------------------------------------------------------
+# Firewall (UFW) Configuration
+# ------------------------------------------------------------------------------
+- name: Configure UFW firewall rules if active
+  when: port_forward_configure_ufw | bool
+  block:
+    - name: Check if UFW is installed
+      ansible.builtin.command: which ufw
+      register: port_forward_ufw_bin
+      changed_when: false
+      failed_when: false
+
+    - name: Check UFW status
+      ansible.builtin.command: ufw status
+      register: port_forward_ufw_status
+      changed_when: false
+      failed_when: false
+      when: port_forward_ufw_bin.rc == 0
+
+    - name: Allow public ports in UFW
+      ansible.builtin.command: "ufw allow {{ item.public_port }}/tcp"
+      changed_when: false
+      loop: "{{ port_forward_normalized_mappings }}"
+      loop_control:
+        label: "{{ item.public_port }}/tcp"
+      when:
+        - port_forward_ufw_bin.rc == 0
+        - "'Status: active' in port_forward_ufw_status.stdout"
+
+# ------------------------------------------------------------------------------
+# Access Summary & Security Checklist
+# ------------------------------------------------------------------------------
+- name: Display exposed port mappings and access details
+  ansible.builtin.debug:
+    msg: |
+      ================================================================================
+      🌐 LOCALHOST PORTS EXPOSED VIA NGINX REVERSE PROXY
+      ================================================================================
+      Target Host: {{ ansible_host | default(inventory_hostname) }}
+      Active Mappings:
+      {% for m in port_forward_normalized_mappings %}
+        ➜ Public: http://{{ ansible_host | default(inventory_hostname) }}:{{ m.public_port }}/  ──►  Local: http://{{ m.local_host }}:{{ m.local_port }}/
+      {% endfor %}
+      --------------------------------------------------------------------------------
+      {% if port_forward_auth_active | bool %}
+      🔒 HTTP Basic Auth: ENABLED
+         Username: {{ port_forward_effective_user }}
+         Password: [PROTECTED]
+      {% else %}
+      🔓 HTTP Basic Auth: DISABLED (Open Access)
+         To enable password protection, re-run with:
+           -e 'auth=true -e auth_pass=YourSecretPassword'
+      {% endif %}
+      --------------------------------------------------------------------------------
+      ⚠️  AWS / Cloud Security Group Checklist:
+         Ensure inbound TCP ports are open in your AWS EC2 Security Group:
+         Ports: {{ port_forward_normalized_mappings | map(attribute='public_port') | list | join(', ') }}
+      ================================================================================

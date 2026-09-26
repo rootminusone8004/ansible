@@ -1,0 +1,8 @@
+---
+# ==============================================================================
+# Expose Ports Playbook (Alias)
+# Imports port_forward.yaml
+# ==============================================================================
+- name: Expose localhost services to public IP via Nginx
+  ansible.builtin.import_playbook: port_forward.yaml
+  tags: [port_forward, expose_ports, nginx]

@@ -1,0 +1,39 @@
+---
+# Default variables for port_forward role
+
+# List of ports or mappings to expose from localhost (127.0.0.1) to the public IP.
+# Supported input formats:
+#   1. Integer / String port (symmetric mapping):
+#      - 4512                -> Public :4512 to Localhost :4512
+#      - "8888"              -> Public :8888 to Localhost :8888
+#   2. Docker-style mapping string:
+#      - "80:8888"           -> Public :80 to Localhost :8888
+#   3. Dictionary specification:
+#      - public_port: 8080
+#        local_port: 3000
+#        local_host: 127.0.0.1  # optional, default: 127.0.0.1
+#        auth: true             # optional, default: inherits global auth
+port_forward_ports:
+  - 4512
+  - 8888
+
+# HTTP Basic Authentication (Global password protection across all exposed ports)
+port_forward_enable_auth: false
+port_forward_auth_user: "admin"
+port_forward_auth_password: ""
+port_forward_auth_realm: "Restricted Access - Authentication Required"
+
+# Remove default Nginx welcome/placeholder sites to avoid port conflicts (e.g. port 80)
+port_forward_remove_default_site: true
+
+# Client max body size (0 means unlimited; prevents HTTP 413 on file uploads/datasets)
+port_forward_client_max_body_size: "0"
+
+# Timeout for long-lived / persistent connections (WebSockets, Jupyter, streaming servers)
+port_forward_proxy_timeout: "86400s"
+
+# Enable WebSocket proxy headers (Connection: upgrade, Upgrade: $http_upgrade)
+port_forward_enable_websocket: true
+
+# Automatically allow mapped public ports in UFW if UFW is active on the host
+port_forward_configure_ufw: true

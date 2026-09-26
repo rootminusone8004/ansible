@@ -53,10 +53,12 @@
 │   ├── 🚀 site.yaml               # Master site orchestration
 │   ├── 💻 basic_setup.yaml        # Full workstation & development environment
 │   ├── 🐳 docker.yaml             # Docker Engine + LazyDocker
+│   ├── 🔀 expose_ports.yaml       # Alias for port_forward.yaml
 │   ├── 🛡️ kali.yaml               # Kali Linux security toolkit & configurations
 │   ├── ☸️ kind.yaml               # Kubernetes-in-Docker setup
 │   ├── 🌐 kubeadm.yaml            # Multi-node production-grade K8s cluster
-│   └── 📦 minikube.yaml           # Local Minikube development cluster
+│   ├── 📦 minikube.yaml           # Local Minikube development cluster
+│   └── 🔀 port_forward.yaml       # Expose localhost ports to public IP via Nginx
 └── 📂 roles/                      # Self-contained, reusable Ansible roles
     ├── 🧰 common/                 # System upgrade, EPEL repo, base utilities
     ├── 🐳 docker/                 # Container runtime, keyrings, daemon handlers
@@ -70,6 +72,7 @@
     ├── 🌿 lazygit/                # LazyGit TUI git client (multi-arch)
     ├── 📦 minikube/               # Minikube binary installer (multi-arch)
     ├── 📝 neovim/                 # Neovim binary, dependencies, PATH injection
+    ├── 🔀 port_forward/           # Flexible Nginx reverse proxy for localhost services
     ├── 🪟 tmux/                   # Tmux terminal multiplexer & TPM plugins
     └── 🐚 zsh/                    # Zsh shell, Powerlevel10k, syntax & autosuggest plugins
 ```
@@ -92,6 +95,7 @@
 | [**`lazygit`**](roles/lazygit) | Simple terminal UI for git commands | `v0.56.0` | — |
 | [**`minikube`**](roles/minikube) | Local Kubernetes development environment | `latest` | — |
 | [**`neovim`**](roles/neovim) | Neovim text editor binary & environment PATH setup | `v0.12.3` | — |
+| [**`port_forward`**](roles/port_forward) | Dynamic Nginx reverse proxy to expose localhost ports to public IP | `port_forward_ports: [4512, 8888]` | 🔄 Restart / Reload Nginx |
 | [**`tmux`**](roles/tmux) | Tmux multiplexer and Tmux Plugin Manager (TPM) | `TPM: master` | — |
 | [**`zsh`**](roles/zsh) | Zsh shell with Powerlevel10k, syntax-highlighting & autosuggestions | `Default Shell: /usr/bin/zsh` | — |
 
@@ -104,6 +108,8 @@
 | [`site.yaml`](playbooks/site.yaml) | 🌟 Master orchestration entry point | Imports `basic_setup.yaml`, `docker.yaml` |
 | [`basic_setup.yaml`](playbooks/basic_setup.yaml) | 💻 Workstation & server environment | `common`, `zsh`, `tmux`, `fzf`, `neovim`, `lazygit`, `dotfiles` |
 | [`docker.yaml`](playbooks/docker.yaml) | 🐳 Containerized host setup | `docker`, `lazydocker` |
+| [`port_forward.yaml`](playbooks/port_forward.yaml) | 🔀 Dynamic localhost port exposition via Nginx | `port_forward` |
+| [`expose_ports.yaml`](playbooks/expose_ports.yaml) | 🔀 Alias for `port_forward.yaml` | Imports `port_forward.yaml` |
 | [`kali.yaml`](playbooks/kali.yaml) | 🛡️ Offensive security & auditing system | `common`, `kali` |
 | [`kind.yaml`](playbooks/kind.yaml) | ☸️ KinD development machine | `docker`, `kubectl`, `kind` |
 | [`minikube.yaml`](playbooks/minikube.yaml) | 📦 Minikube development machine | `docker`, `kubectl`, `minikube` |
@@ -169,6 +175,15 @@ ansible-playbook playbooks/basic_setup.yaml --tags zsh,neovim
 
 # 🐳 Install Docker and LazyDocker
 ansible-playbook playbooks/docker.yaml
+
+# 🔀 Expose localhost services to public IP (default: 4512, 8888)
+ansible-playbook playbooks/port_forward.yaml
+
+# 🔀 Expose custom ports dynamically on the fly
+ansible-playbook playbooks/port_forward.yaml -e 'ports="4512,8888,80:3000"'
+
+# 🔒 Expose ports with HTTP Basic Auth password protection
+ansible-playbook playbooks/port_forward.yaml -e 'auth=true -e auth_pass="MySecretPassword123!"'
 
 # 🌐 Deploy multi-node Kubernetes cluster
 ansible-playbook -i inventory/kubeadm.yaml playbooks/kubeadm.yaml

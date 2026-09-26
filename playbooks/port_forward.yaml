@@ -1,0 +1,11 @@
+---
+# ==============================================================================
+# Port Forward Playbook
+# Dynamically exposes arbitrary localhost ports to the public IP via Nginx
+# ==============================================================================
+- name: Expose localhost services to public IP via Nginx
+  hosts: all
+  become: true
+  roles:
+    - role: port_forward
+      tags: [port_forward, expose_ports, nginx]

@@ -1,0 +1,91 @@
+# ==============================================================================
+# Dynamic Reverse Proxy Configuration
+# Managed by Ansible (port_forward role) - DO NOT EDIT MANUALLY
+# ==============================================================================
+
+# Map connection upgrade for seamless WebSocket support across all proxy blocks
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+{% for m in port_forward_normalized_mappings %}
+# ------------------------------------------------------------------------------
+# Mapping: Public Port {{ m.public_port }} -> http://{{ m.local_host }}:{{ m.local_port }}
+# ------------------------------------------------------------------------------
+server {
+    listen {{ m.public_port }}{% if m.public_port | int == 80 %} default_server{% endif %};
+    listen [::]:{{ m.public_port }}{% if m.public_port | int == 80 %} default_server{% endif %};
+    server_name _;
+
+{% if port_forward_auth_active | bool and (m.auth | default(true)) %}
+    # HTTP Basic Authentication
+    auth_basic "{{ port_forward_auth_realm }}";
+    auth_basic_user_file /etc/nginx/.htpasswd;
+{% endif %}
+
+    # Disable upload size limit to prevent HTTP 413 Request Entity Too Large
+    client_max_body_size {{ port_forward_client_max_body_size }};
+
+    # Long timeouts for streaming, interactive terminals, and WebSocket stability
+    proxy_read_timeout {{ port_forward_proxy_timeout }};
+    proxy_send_timeout {{ port_forward_proxy_timeout }};
+    proxy_connect_timeout 60s;
+
+    # Disable buffering for real-time output (Jupyter kernels, logs, SSE)
+    proxy_buffering off;
+    proxy_cache off;
+
+    location / {
+        proxy_pass http://{{ m.local_host }}:{{ m.local_port }};
+        proxy_http_version 1.1;
+
+{% if port_forward_enable_websocket | bool %}
+        # WebSocket support
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+{% endif %}
+
+        # Standard proxy headers
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-Port $server_port;
+
+        # Prevent backend redirects from leaking internal localhost address
+        proxy_redirect http://{{ m.local_host }}:{{ m.local_port }}/ /;
+        proxy_redirect http://localhost:{{ m.local_port }}/ /;
+    }
+
+{% if port_forward_auth_active | bool and (m.auth | default(true)) %}
+    # Exempt background API and terminal WebSocket calls from Basic Auth
+    # to avoid header conflicts with application tokens (such as Jupyter Authorization: token)
+    location ~ ^/(api|terminals|lsp)/ {
+        auth_basic off;
+
+        proxy_pass http://{{ m.local_host }}:{{ m.local_port }};
+        proxy_http_version 1.1;
+
+{% if port_forward_enable_websocket | bool %}
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+{% endif %}
+
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-Port $server_port;
+
+        proxy_read_timeout {{ port_forward_proxy_timeout }};
+        proxy_send_timeout {{ port_forward_proxy_timeout }};
+        proxy_buffering off;
+        proxy_cache off;
+    }
+{% endif %}
+}
+
+{% endfor %}
