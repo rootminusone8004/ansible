@@ -1,0 +1,25 @@
+[Unit]
+Description=ttyd - Share terminal over the web
+After=network.target
+
+[Service]
+Type=simple
+User={{ ttyd_run_user }}
+{% if ttyd_group is defined and ttyd_group | length > 0 %}
+Group={{ ttyd_group }}
+{% endif %}
+{% if ttyd_working_directory is defined and ttyd_working_directory | length > 0 %}
+WorkingDirectory={{ ttyd_working_directory }}
+{% elif ttyd_run_user == 'root' %}
+WorkingDirectory=/root
+{% else %}
+WorkingDirectory=/home/{{ ttyd_run_user }}
+{% endif %}
+ExecStart={{ ttyd_bin_dir }}/ttyd -i {{ ttyd_bind_ip }} -p {{ ttyd_bind_port }}{% if ttyd_writable | bool %} -W{% endif %}{% if ttyd_extra_args is defined and ttyd_extra_args | length > 0 %} {{ ttyd_extra_args }}{% endif %} {{ ttyd_command }}
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

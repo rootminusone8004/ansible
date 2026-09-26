@@ -1,0 +1,31 @@
+---
+# ==============================================================================
+# Default variables for ttyd role
+# ==============================================================================
+
+# ttyd version and binary settings
+ttyd_version: "1.7.7"
+ttyd_bin_dir: "/usr/local/bin"
+
+# ttyd daemon service configuration
+ttyd_bind_ip: "127.0.0.1"       # Bind strictly to localhost so external traffic MUST go through Nginx
+ttyd_bind_port: 7681            # Internal port for ttyd
+ttyd_command: "tmux attach"        # Shell / command executed when web terminal opens
+ttyd_writable: true             # Allow input from the web client (-W flag)
+ttyd_extra_args: ""             # Optional extra command-line flags for ttyd
+ttyd_user: "{{ ansible_user | default('root') }}"
+ttyd_group: ""                  # If empty, uses primary group of ttyd_user
+ttyd_working_directory: ""      # If empty, defaults to home dir of ttyd_user or /root
+
+# Nginx reverse proxy configuration
+ttyd_nginx_port: 80             # Public port exposed by Nginx (e.g. 80, 8080, 443)
+ttyd_nginx_server_name: "_"     # Hostname or domain for Nginx server block ('_' matches any host)
+ttyd_nginx_remove_default: true # Remove default Nginx welcome site to prevent port 80 conflicts
+
+# HTTP Basic Authentication (Protects web terminal from unauthorized access)
+ttyd_auth_user: "admin"
+ttyd_auth_password: ""          # Required: Pass via -e "ttyd_password=..." or set in vars
+ttyd_auth_realm: "Restricted Terminal Access - Authentication Required"
+
+# Firewall configuration
+ttyd_configure_ufw: true        # Automatically allow ttyd_nginx_port in UFW if active

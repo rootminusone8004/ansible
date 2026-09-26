@@ -1,0 +1,197 @@
+---
+# ==============================================================================
+# Tasks for ttyd role
+# Sets up ttyd web terminal and binds it with Nginx with HTTP Basic Auth
+# ==============================================================================
+
+- name: Determine system architecture for ttyd
+  ansible.builtin.set_fact:
+    ttyd_arch: >-
+      {{ 'x86_64' if ansible_facts['architecture'] == 'x86_64' else
+         'aarch64' if ansible_facts['architecture'] in ['aarch64', 'arm64'] else
+         'armhf' if ansible_facts['architecture'] in ['armv7l', 'armhf'] else
+         'i686' if ansible_facts['architecture'] in ['i386', 'i686'] else
+         's390x' if ansible_facts['architecture'] == 's390x' else
+         ansible_facts['architecture'] }}
+
+- name: Fail if architecture is unsupported
+  ansible.builtin.fail:
+    msg: "Unsupported architecture for ttyd: {{ ansible_facts['architecture'] }}"
+  when: ttyd_arch not in ['x86_64', 'aarch64', 'armhf', 'i686', 's390x']
+
+- name: Determine effective authentication credentials and service user
+  ansible.builtin.set_fact:
+    ttyd_effective_user: "{{ auth_user | default(nginx_auth_user | default(ttyd_auth_user)) }}"
+    ttyd_effective_password: "{{ auth_pass | default(auth_password | default(nginx_auth_password | default(ttyd_password | default(ttyd_auth_password)))) }}"
+    ttyd_run_user: "{{ ttyd_user | default(ansible_user | default('root')) }}"
+
+- name: Validate authentication password is provided
+  ansible.builtin.assert:
+    that:
+      - ttyd_effective_password | length > 0
+    fail_msg: >-
+      No password was specified for Nginx Basic Authentication!
+      Please provide a password using:
+        ansible-playbook playbooks/ttyd.yaml -e "ttyd_password=YourSecurePassword"
+      or by defining 'ttyd_auth_password' in your vars.
+
+- name: Update apt cache (Debian family)
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_facts['os_family'] | default('') == 'Debian'
+
+- name: Ensure required packages are installed
+  ansible.builtin.package:
+    name:
+      - nginx
+      - openssl
+      - curl
+      - ca-certificates
+    state: present
+
+- name: Check if ttyd binary exists
+  ansible.builtin.stat:
+    path: "{{ ttyd_bin_dir }}/ttyd"
+  register: ttyd_binary_stat
+
+- name: Check installed ttyd version
+  ansible.builtin.command: "{{ ttyd_bin_dir }}/ttyd --version"
+  register: ttyd_installed_version
+  changed_when: false
+  failed_when: false
+  when: ttyd_binary_stat.stat.exists
+
+- name: Download ttyd standalone binary
+  ansible.builtin.get_url:
+    url: "https://github.com/tsl0922/ttyd/releases/download/{{ ttyd_version }}/ttyd.{{ ttyd_arch }}"
+    dest: "{{ ttyd_bin_dir }}/ttyd"
+    mode: "0755"
+    owner: root
+    group: root
+  when: >
+    not ttyd_binary_stat.stat.exists or
+    ttyd_installed_version.stdout is not defined or
+    ttyd_version not in ttyd_installed_version.stdout
+  notify: restart ttyd
+
+- name: Deploy ttyd systemd service unit
+  ansible.builtin.template:
+    src: ttyd.service.j2
+    dest: /etc/systemd/system/ttyd.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart ttyd
+
+- name: Ensure ttyd service is enabled and running
+  ansible.builtin.systemd:
+    name: ttyd
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Hash password for Nginx HTTP Basic Auth
+  ansible.builtin.command:
+    argv:
+      - openssl
+      - passwd
+      - -apr1
+      - "{{ ttyd_effective_password }}"
+  register: ttyd_hashed_password
+  changed_when: false
+  no_log: true
+
+- name: Deploy Nginx htpasswd credentials file
+  ansible.builtin.copy:
+    dest: /etc/nginx/.htpasswd_ttyd
+    content: "{{ ttyd_effective_user }}:{{ ttyd_hashed_password.stdout.strip() }}\n"
+    owner: root
+    group: "{{ 'www-data' if (ansible_facts['os_family'] | default('')) == 'Debian' else 'nginx' }}"
+    mode: "0640"
+  notify: restart nginx
+
+- name: Ensure /etc/nginx/conf.d directory exists
+  ansible.builtin.file:
+    path: /etc/nginx/conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Remove default Nginx site configurations
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/nginx/sites-enabled/default
+    - /etc/nginx/conf.d/default.conf
+  when: ttyd_nginx_remove_default | bool
+  notify: restart nginx
+
+- name: Deploy Nginx reverse proxy configuration for ttyd
+  ansible.builtin.template:
+    src: ttyd.nginx.conf.j2
+    dest: /etc/nginx/conf.d/ttyd.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart nginx
+
+- name: Test Nginx configuration syntax
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Ensure Nginx service is enabled and started
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Flush handlers to apply configuration immediately
+  ansible.builtin.meta: flush_handlers
+
+- name: Configure UFW firewall rule for ttyd web access
+  when: ttyd_configure_ufw | bool
+  block:
+    - name: Check if UFW is installed
+      ansible.builtin.command: which ufw
+      register: ttyd_ufw_bin
+      changed_when: false
+      failed_when: false
+
+    - name: Check UFW status
+      ansible.builtin.command: ufw status
+      register: ttyd_ufw_status
+      changed_when: false
+      failed_when: false
+      when: ttyd_ufw_bin.rc == 0
+
+    - name: Allow Nginx public port in UFW
+      ansible.builtin.command: "ufw allow {{ ttyd_nginx_port }}/tcp"
+      changed_when: false
+      when:
+        - ttyd_ufw_bin.rc == 0
+        - "'Status: active' in ttyd_ufw_status.stdout"
+
+- name: Display ttyd deployment summary and access information
+  ansible.builtin.debug:
+    msg: |
+      ================================================================================
+      💻 TTYD WEB TERMINAL DEPLOYED SUCCESSFULLY
+      ================================================================================
+      Target Host : {{ ansible_host | default(inventory_hostname) }}
+      Web Access  : http://{{ ansible_host | default(inventory_hostname) }}{{ '' if ttyd_nginx_port | int == 80 else ':' + (ttyd_nginx_port | string) }}/
+      --------------------------------------------------------------------------------
+      🔒 Basic Auth Credentials:
+         Username : {{ ttyd_effective_user }}
+         Password : [PROTECTED] (configured via Ansible)
+         Auth File: /etc/nginx/.htpasswd_ttyd
+      --------------------------------------------------------------------------------
+      ⚙️ Service Details:
+         Local Binding : http://{{ ttyd_bind_ip }}:{{ ttyd_bind_port }} (Loopback only)
+         Shell Command : {{ ttyd_command }}
+         Session User  : {{ ttyd_run_user }}
+         Systemd Unit  : systemctl status ttyd
+         Nginx Config  : /etc/nginx/conf.d/ttyd.conf
+      ================================================================================

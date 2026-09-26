@@ -1,0 +1,11 @@
+---
+# ==============================================================================
+# ttyd Web Terminal Playbook
+# Sets up ttyd, binds it behind Nginx reverse proxy with HTTP Basic Auth
+# ==============================================================================
+- name: Setup ttyd Web Terminal with Nginx and Password Authentication
+  hosts: all
+  become: true
+  roles:
+    - role: ttyd
+      tags: [ttyd, terminal, nginx, web]
